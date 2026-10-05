@@ -1,0 +1,35 @@
+# FURTU licence
+
+**This decision has not been made yet, and this file is a placeholder.**
+
+FURTU's own licence was not specified in the brief, and choosing one is a
+business decision rather than an engineering one. This file therefore does not
+assert a licence. Until it is replaced, the default legal position applies:
+**all rights reserved**, nobody is granted permission to copy, modify or
+redistribute this work.
+
+## What to do
+
+Pick one and replace this file wholesale.
+
+- **Open source** — MIT or Apache-2.0 both work and both are compatible with
+  every dependency in `THIRD-PARTY-NOTICES.md`. MIT is the shortest to adopt and
+  is what `pdf-lib`, `js-yaml`, `qrcode` and `fflate` already use, so MIT is the
+  frictionless default. Apache-2.0 adds an explicit patent grant.
+- **Proprietary** — delete this file and replace it with a copyright notice plus
+  whatever terms the client requires. No other file needs to change; nothing in
+  the build reads it.
+
+## Note on the dependencies
+
+Whatever is chosen here, it cannot conflict with the shipped dependencies. All
+seven runtime libraries are MIT or Apache-2.0, both of which permit relicensing
+of the combined work under compatible terms. There is no copyleft obligation
+anywhere in `dist/`.
+
+## Dependencies of the design source
+
+The visual design supplied with this project is treated as first-party material
+for licensing purposes. If the design actually originated elsewhere, its terms
+should be checked before this project is published — see section 3 of
+`THIRD-PARTY-NOTICES.md`.

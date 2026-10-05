@@ -1,0 +1,1170 @@
+import { BATCH_20, IMAGE_INPUT, SINGLE } from "./formats";
+import type { ToolDefinition } from "./types";
+
+const LOCAL = "local" as const;
+
+export const IMAGE_TOOLS: ToolDefinition[] = [
+  {
+    slug: "compress-image",
+    category: "image",
+    name: "Compress Image",
+    summary: "Make a photo or screenshot smaller while keeping it sharp enough to use.",
+    description:
+      "Reduce the size of a JPG, PNG or WebP by re-encoding it at a quality you pick, with the real before and after numbers shown for every file. Use it when a form rejects an oversized upload, an email refuses to send, or one 4 MB picture is making a page feel slow.",
+    icon: "compress",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "quality",
+        label: "Quality",
+        min: 10,
+        max: 100,
+        step: 5,
+        default: 75,
+        suffix: "%",
+        help: "Lower means a smaller file and more visible artefacts. Around 75–80 is indistinguishable from the original for most photographs.",
+      },
+      {
+        kind: "select",
+        id: "format",
+        label: "Output format",
+        default: "auto",
+        options: [
+          { value: "auto", label: "Same as the original" },
+          { value: "image/webp", label: "WebP — smallest" },
+          { value: "image/jpeg", label: "JPG — most compatible" },
+          { value: "image/png", label: "PNG — lossless, largest" },
+        ],
+        help: "Keeping the original format is the safest default. WebP is usually 25–35% smaller than JPG for the same perceived quality.",
+      },
+    ],
+    keywords: [
+      "compress image",
+      "reduce image size",
+      "shrink photo",
+      "image compressor",
+      "make jpg smaller",
+    ],
+    synonyms: [
+      "make smaller",
+      "shrink",
+      "reduce",
+      "optimise",
+      "squash",
+      "squeeze",
+      "lighter",
+      "jpegsmaller",
+    ],
+    popular: true,
+    mode: LOCAL,
+    faq: [
+      {
+        q: "Are my images uploaded?",
+        a: "No. The image is decoded and re-encoded inside your browser using the codecs already built into it. Nothing is sent anywhere, which matters most for the photos people compress: passports, receipts, client work and anything shot at home.",
+      },
+      {
+        q: "How much smaller will it get?",
+        a: "A typical photograph re-encoded at 75% lands around a third of its original size. Screenshots with large flat areas compress even better. Images saved at maximum quality, or PNG files full of transparency, often shrink much less. Furtu shows the real before and after size for every file so you can see what actually happened.",
+      },
+      {
+        q: "Will the quality loss be visible?",
+        a: "At 75–85% on a photograph, almost never. Artefacts show up first in skies, gradients and fine text, and they become obvious below about 50%. If the file is a screenshot with sharp text, keep it at 90% or leave it as PNG.",
+      },
+      {
+        q: "Does compressing an already-compressed image help?",
+        a: "It helps, but with diminishing returns. Each re-encode works from the pixels already present, so a second pass can never recover detail the first one discarded. Compressing a file that was saved at quality 100 usually gains a lot; compressing one saved at quality 60 usually gains a little.",
+      },
+      {
+        q: "Can I compress a whole folder at once?",
+        a: "Yes. Add up to 20 images at once and Furtu works through them, reporting the result for each one. A file that fails is reported on its own rather than stopping the rest of the batch.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your images",
+        body: "Drop in one or several JPG, PNG or WebP files. Each is checked against its real file signature before it is accepted.",
+      },
+      {
+        title: "Choose a quality",
+        body: "Start at 75%. Drop towards 50% for maximum savings on a photo gallery, or raise it towards 90% for screenshots with fine text.",
+      },
+      {
+        title: "Download the smaller files",
+        body: "Furtu re-encodes each image in your browser and shows the original size, the new size and the percentage saved.",
+      },
+    ],
+    limitations: [
+      "Compression is a re-encode, so the pixels are decoded and written again. That is what removes the savings opportunity: a file that has already been compressed hard cannot be recovered by compressing it again.",
+      "Transparency is lost when you convert a transparent image to JPG, because JPG has no alpha channel. The transparent areas are filled with white.",
+      "GIFs are rejected, animated or not. A canvas round-trip cannot preserve animation, and a still GIF would come out as a silently flattened first frame, so Furtu refuses it rather than handing you something that only looks correct.",
+      "SVG is a vector format and cannot be re-encoded through a canvas without rasterising it, so vector files are rejected with an explanation rather than returned as a lossy approximation.",
+    ],
+    related: ["compress-image-to-200kb", "convert-image", "resize-image"],
+  },
+  {
+    slug: "resize-image",
+    category: "image",
+    name: "Resize Image",
+    summary: "Set an image to exact pixel dimensions for a listing, an upload or a banner.",
+    description:
+      "Scale an image to the width and height you need, in pixels, with an option to lock the aspect ratio so nothing is stretched. Furtu resamples with high-quality smoothing, which keeps edges clean when you scale down — the operation marketplaces and CMSs ask for most often.",
+    icon: "image",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "width",
+        label: "Width",
+        min: 1,
+        max: 20000,
+        step: 1,
+        default: 1920,
+        suffix: "px",
+        help: "With Keep aspect ratio on, fill in one dimension and the other is calculated for you. Fill in both and the image is scaled to fit inside the box without changing its proportions.",
+      },
+      {
+        kind: "number",
+        id: "height",
+        label: "Height",
+        min: 0,
+        max: 20000,
+        step: 1,
+        default: 0,
+        suffix: "px",
+        help: "Set to 0 to work from the width alone. Turn Keep aspect ratio off to force both numbers exactly.",
+      },
+      {
+        kind: "toggle",
+        id: "keepAspect",
+        label: "Keep aspect ratio",
+        default: true,
+        help: "On, the missing dimension is derived from the image so the result is never distorted. Off, the image is forced to exactly the width and height you typed.",
+      },
+      {
+        kind: "select",
+        id: "format",
+        label: "Output format",
+        default: "auto",
+        options: [
+          { value: "auto", label: "Same as the original" },
+          { value: "image/webp", label: "WebP — smallest" },
+          { value: "image/jpeg", label: "JPG" },
+          { value: "image/png", label: "PNG — lossless" },
+        ],
+      },
+    ],
+    keywords: [
+      "resize image",
+      "change image size",
+      "image resizer",
+      "scale image pixels",
+      "set image dimensions",
+    ],
+    synonyms: [
+      "resize",
+      "scale",
+      "shrink to fit",
+      "make smaller",
+      "pixel dimensions",
+      "set width and height",
+    ],
+    popular: true,
+    mode: LOCAL,
+    faq: [
+      {
+        q: "Does resizing blur the image?",
+        a: "Scaling down uses high-quality smoothing, so a photo reduced from 4000 pixels to 1200 looks clean rather than blocky. Scaling up cannot invent detail that is not there: an image enlarged beyond its own resolution will look soft, which is why enlarging is usually a mistake.",
+      },
+      {
+        q: "How do I set only the width?",
+        a: "Fill in the width and leave the height at 0 with Keep aspect ratio on. Furtu calculates the height from the image’s own proportions, so a 3000×2000 photo at 1200 pixels wide comes out as 1200×800.",
+      },
+      {
+        q: "Does the metadata survive?",
+        a: "The pixels do, and the EXIF does not. A canvas cannot copy camera data across to a new file, so writing a resized image produces a clean file without GPS coordinates, camera model or timestamps. That is usually welcome, and it is worth knowing if you were relying on that data.",
+      },
+      {
+        q: "Can I resize a batch of images to one size?",
+        a: "Yes. Add up to 20 images and the same dimensions are applied to each, which is what you want for a product catalogue or a gallery. Turn Keep aspect ratio off only when every image already has the same proportions.",
+      },
+      {
+        q: "Are the images uploaded to be resized?",
+        a: "No. The pixels are decoded, resampled and re-encoded inside your browser. Nothing is sent to a server, so resizing a set of unreleased product photos or a private document leaves no trace anywhere but your own device.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your images",
+        body: "Drop in the files you want to resize, or browse your device. Each one is validated before it is decoded.",
+      },
+      {
+        title: "Set the dimensions",
+        body: "Enter a width and a height in pixels. Leave one at zero, or lock the aspect ratio, and Furtu derives the other value from the image.",
+      },
+      {
+        title: "Download the resized files",
+        body: "Each image is resampled and re-encoded on your device, and the result is shown with its new dimensions.",
+      },
+    ],
+    limitations: [
+      "Enlarging an image past its own resolution produces a soft result. The pixels are interpolated, not recovered.",
+      "Forcing both width and height with Keep aspect ratio off will distort the picture if the proportions differ from the original.",
+      "Resizing always re-encodes the file, so lossy formats lose a little quality on the way. PNG is re-encoded losslessly and keeps hard edges exactly.",
+      "SVG and animated GIF are not supported: a canvas cannot re-encode vector art or animation. Both are rejected with an explanation.",
+    ],
+    related: ["compress-image", "crop-image", "convert-image"],
+  },
+  {
+    slug: "convert-image",
+    category: "image",
+    name: "Convert Image",
+    summary: "Move an image between JPG, PNG, WebP and AVIF in one step.",
+    description:
+      "Convert any browser-readable image to the format you actually need, with a quality control for the lossy formats. Useful when a platform only accepts one type, or when a design tool hands you an AVIF that your CMS will not display.",
+    icon: "palette",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "select",
+        id: "format",
+        label: "Convert to",
+        default: "image/webp",
+        options: [
+          { value: "image/webp", label: "WebP" },
+          { value: "image/jpeg", label: "JPG" },
+          { value: "image/png", label: "PNG" },
+          { value: "image/avif", label: "AVIF" },
+        ],
+        help: "WebP is the best default for the web. If your browser cannot encode AVIF, Furtu produces a WebP instead and says so rather than handing you a mislabelled file.",
+      },
+      {
+        kind: "number",
+        id: "quality",
+        label: "Quality",
+        min: 10,
+        max: 100,
+        step: 5,
+        default: 85,
+        suffix: "%",
+        help: "Applies to JPG, WebP and AVIF. PNG is lossless, so this setting is ignored.",
+      },
+    ],
+    keywords: [
+      "convert image",
+      "image format converter",
+      "change image format",
+      "convert to webp",
+      "image converter",
+    ],
+    synonyms: ["convert", "change format", "file type", "to jpg", "to png", "to avif", "transcode"],
+    mode: LOCAL,
+    faq: [
+      {
+        q: "Which format should I pick?",
+        a: "WebP for anything on the web: it is smaller than JPG at the same perceived quality and supported by every current browser. PNG when you need hard edges, text or transparency preserved exactly. JPG when you are feeding something old — a print workflow, an email client, a CMS that predates WebP. AVIF compresses best of all, but only if your audience’s browsers support it.",
+      },
+      {
+        q: "Are the images uploaded to convert them?",
+        a: "No. Decoding and encoding both happen in your browser, so a design comp, a client photo or a screenshot of something confidential never travels to a third party.",
+      },
+      {
+        q: "What happens to transparency when I convert to JPG?",
+        a: "JPG has no transparency channel, so transparent pixels are filled with white. Convert to PNG or WebP if the transparent background is the point.",
+      },
+      {
+        q: "Why did I get a WebP when I asked for AVIF?",
+        a: "AVIF encoding is not available in every browser, and some quietly return a PNG instead. Furtu checks the bytes of the file it produced rather than trusting the browser, and if the result is not real AVIF it falls back to WebP, names the file correctly and tells you in the result note.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your images",
+        body: "Drop in any browser-readable image files. Furtu checks the file signature so a renamed file is caught before it reaches the decoder.",
+      },
+      {
+        title: "Choose the target format",
+        body: "Pick JPG, PNG, WebP or AVIF and set the quality. The quality setting only applies to the formats that have one.",
+      },
+      {
+        title: "Download the converted files",
+        body: "Each image is re-encoded on your device and given the correct extension for the format that was actually written.",
+      },
+    ],
+    limitations: [
+      "Converting from a lossy format to another lossy format cannot undo the first lossy pass. Converting JPG to WebP is a clear win; converting a heavily compressed JPG to AVIF is not.",
+      "AVIF output depends on your browser supporting AVIF encoding. Where it is missing, Furtu writes a WebP and says so in the note.",
+      "Transparency is flattened onto a white background when converting to JPG.",
+      "SVG is rejected: it is a vector format, and rasterising it here would silently change the artwork. Animated GIFs are rejected for the same reason a canvas cannot keep the animation.",
+    ],
+    related: ["jpg-to-webp", "png-to-webp", "webp-to-jpg"],
+  },
+  {
+    slug: "jpg-to-webp",
+    category: "image",
+    name: "JPG to WebP",
+    summary: "Turn JPG photos into WebP and cut the file size by around a third.",
+    description:
+      "Convert JPG images to WebP, the format every current browser supports and every page loads faster with. Furtu re-encodes each file in your browser at a quality you control, and shows the before and after size so you can see the saving rather than take it on trust.",
+    icon: "arrow",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "quality",
+        label: "Quality",
+        min: 10,
+        max: 100,
+        step: 5,
+        default: 80,
+        suffix: "%",
+        help: "WebP at 80% is usually indistinguishable from the original JPG and roughly 30% smaller. Below 50% artefacts become obvious in skies and gradients.",
+      },
+    ],
+    keywords: [
+      "jpg to webp",
+      "convert jpg to webp",
+      "webp converter",
+      "change jpg to webp",
+      "jpg webp",
+    ],
+    synonyms: ["jpg2webp", "to webp", "modernise images", "webp version", "smaller web images"],
+    popular: true,
+    mode: LOCAL,
+    seoTitle: "JPG to WebP Converter — Smaller Images, No Upload",
+    seoDescription:
+      "Convert JPG images to WebP in your browser. See the real before and after file size, choose your own quality, and convert up to 20 files at once. Nothing is uploaded.",
+    faq: [
+      {
+        q: "Will converting JPG to WebP make the image look worse?",
+        a: "At the default quality of 80%, almost never. WebP is a more efficient encoder than JPG, so at the same setting it usually produces a smaller file at the same perceived quality. Where you do notice a difference, it appears first in skies, gradients and dense fine detail.",
+      },
+      {
+        q: "Do my photos get uploaded?",
+        a: "No. Furtu decodes and re-encodes the file inside your browser. The JPG never leaves your device, so this is safe for personal photos, unreleased client work and anything with people in it.",
+      },
+      {
+        q: "How much smaller will the files be?",
+        a: "For photographs, expect 25–35% smaller at the default quality. Screenshots and images with large flat areas often do much better. A JPG that was already saved at maximum quality gives up more than one saved at a moderate setting.",
+      },
+      {
+        q: "Is WebP supported everywhere?",
+        a: "By every current version of Chrome, Edge, Firefox, Safari, Chrome for Android and Safari on iOS. It has been broadly supported since 2020. The gaps are old software: some email clients and a handful of content management systems still refuse it, which is when you want “WebP to JPG” instead.",
+      },
+      {
+        q: "Does the conversion keep my EXIF data?",
+        a: "No, and that is a benefit here. A canvas cannot copy camera information onto a new file, so the WebP comes out without GPS coordinates, camera model or timestamps. If you need those, keep the original JPG.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your JPG files",
+        body: "Drop in one image or a whole batch of up to 20. Each is checked against the real JPG file signature.",
+      },
+      {
+        title: "Set the quality",
+        body: "Leave it at 80% for photographs. Raise it towards 90% for images with fine text, or drop it towards 60% to prioritise file size.",
+      },
+      {
+        title: "Download the WebP files",
+        body: "Each image is re-encoded locally, named with the .webp extension and shown with its size before and after.",
+      },
+    ],
+    limitations: [
+      "Converting from JPG is a lossy step, so the file is decoded and written again. The result is close to the original but not identical to it.",
+      "If the source is a PNG or WebP rather than a JPG, it still works — the tool converts whatever you give it — but the page is aimed at JPGs.",
+      "Animated GIFs and SVGs are rejected. A canvas cannot preserve GIF animation and cannot re-encode vector art without rasterising it.",
+      "Very old browsers without WebP support cannot display the result. Every current browser is fine.",
+    ],
+    related: ["convert-image", "compress-image-to-200kb", "compress-image"],
+  },
+  {
+    slug: "png-to-webp",
+    category: "image",
+    name: "PNG to WebP",
+    summary: "Convert PNG screenshots, diagrams and cut-outs to a much lighter WebP.",
+    description:
+      "Move PNG images into WebP without leaving your browser. PNG is excellent for screenshots and graphics but heavy on disk; WebP keeps transparency and usually lands at a fraction of the size, which matters when a page carries a dozen of them.",
+    icon: "arrow",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "quality",
+        label: "Quality",
+        min: 10,
+        max: 100,
+        step: 5,
+        default: 90,
+        suffix: "%",
+        help: "Set higher than for photographs. Flat areas compress well in WebP, and a higher quality keeps small text and thin lines crisp.",
+      },
+    ],
+    keywords: [
+      "png to webp",
+      "convert png to webp",
+      "webp from png",
+      "png webp converter",
+      "optimise png",
+    ],
+    synonyms: ["png2webp", "screenshots to webp", "to webp", "lighten png", "png optimizer"],
+    mode: LOCAL,
+    seoTitle: "PNG to WebP Converter — Shrink Screenshots and Graphics",
+    seoDescription:
+      "Convert PNG images to WebP in your browser, with transparency kept and the real before and after file size shown. Convert up to 20 files at once. Nothing is uploaded.",
+    faq: [
+      {
+        q: "Does PNG to WebP keep transparency?",
+        a: "Yes. WebP supports an alpha channel, so a logo or cut-out with a transparent background converts cleanly. Converting to JPG would flatten that transparency onto white, which is why it is not the right target here.",
+      },
+      {
+        q: "Are PNG files uploaded?",
+        a: "No. Everything happens in your browser, using the image codecs already present in it. Nothing is sent to a server, so a screenshot of an unreleased design or a private document is not exposed to anyone else.",
+      },
+      {
+        q: "How much smaller will a PNG become?",
+        a: "A lot, usually. Flat areas and repeated colours — exactly what a screenshot or a diagram is made of — are handled far more efficiently by WebP. Screenshots commonly drop by 60–90%. A photographic PNG, which is already a poor fit for its own format, may save less.",
+      },
+      {
+        q: "Is the converted WebP lossless?",
+        a: "No. Browsers do not expose a lossless WebP encoder, so the conversion applies the quality setting you choose. At 90% or above, artefacts on flat graphics are very hard to see; the pixels are nevertheless recompressed rather than copied.",
+      },
+      {
+        q: "Should I keep the PNG instead?",
+        a: "If the image is a logo, a diagram or an illustration you will edit again, keeping the PNG is reasonable. For anything served to a page — screenshots, thumbnails, decorative graphics — WebP at the same quality is the better file.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your PNG files",
+        body: "Drop in your screenshots, diagrams or cut-outs. Furtu checks the PNG file signature so a renamed file is caught early.",
+      },
+      {
+        title: "Set the quality",
+        body: "Start at 90%. WebP handles flat graphics well, so a higher quality costs little in file size compared with a photograph.",
+      },
+      {
+        title: "Download the WebP files",
+        body: "Each image is re-encoded in your browser with transparency preserved, and the size saving is shown for every file.",
+      },
+    ],
+    limitations: [
+      "The conversion is lossy. The browser does not expose a lossless WebP encoder, so the pixels are recompressed at your chosen quality.",
+      "Text in a screenshot can soften slightly at low quality. If the text must stay razor sharp, use 90–100% or keep the PNG.",
+      "Animated GIFs and SVGs are rejected, because a canvas cannot preserve animation or re-encode vector art without rasterising it.",
+      "Furtu does not resize in this step. If the file is also too large in pixels, run “Resize Image” first.",
+    ],
+    related: ["convert-image", "webp-to-jpg", "compress-image"],
+  },
+  {
+    slug: "webp-to-jpg",
+    category: "image",
+    name: "WebP to JPG",
+    summary: "Convert WebP images back to JPG for anything that will not accept WebP.",
+    description:
+      "Turn WebP files into JPGs for email clients, print workflows, stock libraries and older content management systems that still reject the format. Furtu converts in your browser, fills any transparency with a colour you choose, and reports the size of every file.",
+    icon: "arrow",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "quality",
+        label: "Quality",
+        min: 10,
+        max: 100,
+        step: 5,
+        default: 90,
+        suffix: "%",
+        help: "The result will usually be larger than the WebP it came from, because JPG is the less efficient format. Keep it high so the round trip costs as little as possible.",
+      },
+      {
+        kind: "color",
+        id: "background",
+        label: "Background for transparent areas",
+        default: "#ffffff",
+        help: "JPG has no transparency. Any transparent pixels in the source are filled with this colour; white is the safe default.",
+      },
+    ],
+    keywords: [
+      "webp to jpg",
+      "convert webp to jpeg",
+      "webp jpg converter",
+      "change webp to jpg",
+      "webp to jpeg",
+    ],
+    synonyms: [
+      "webp2jpg",
+      "to jpg",
+      "to jpeg",
+      "back to jpg",
+      "email-safe images",
+      "compatibility",
+    ],
+    mode: LOCAL,
+    seoTitle: "WebP to JPG Converter — For Email, Print and Old CMSs",
+    seoDescription:
+      "Convert WebP images to JPG in your browser. Transparency is filled with a colour you choose, quality is under your control, and nothing is uploaded to a server.",
+    faq: [
+      {
+        q: "What should I use WebP to JPG for?",
+        a: "The places that still will not take WebP: some email clients, older versions of WordPress and other content management systems, print workflows, stock libraries and a handful of social platforms. If your image is going to a website, keep the WebP — it is smaller and every current browser displays it.",
+      },
+      {
+        q: "What happens to a transparent WebP?",
+        a: "JPG has no alpha channel, so the transparent pixels are filled with the background colour you choose — white unless you change it. Anything the mask covered is lost at that point, so keep the WebP as well if you need it back.",
+      },
+      {
+        q: "Are the images uploaded to be converted?",
+        a: "No. The conversion runs entirely in your browser. The WebP is decoded, drawn and re-encoded as a JPG on your own device, and nothing is transmitted.",
+      },
+      {
+        q: "Will the JPG be bigger than the WebP?",
+        a: "Almost always. That is the point of WebP being a better format: going back to JPG gives you a larger file for the same picture. Furtu shows both numbers so you can see the cost, and it is the reason to keep the WebP as the master where you can.",
+      },
+      {
+        q: "Can I convert a whole folder?",
+        a: "Yes, up to 20 files in one run. A file that cannot be decoded is reported on its own and the rest of the batch still completes.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your WebP files",
+        body: "Drop in the WebP images you need as JPGs. Each file is validated against its real signature first.",
+      },
+      {
+        title: "Set quality and background",
+        body: "Choose the JPG quality and the colour that should replace any transparent area in the source.",
+      },
+      {
+        title: "Download the JPGs",
+        body: "Each image is re-encoded in your browser and named with the correct .jpg extension, with its size shown.",
+      },
+    ],
+    limitations: [
+      "A JPG is typically larger than the WebP it was made from. Converting back is a compatibility step, not a compression step.",
+      "Transparency cannot survive the conversion and is replaced with the background colour. Keep the original if you need it later.",
+      "The conversion is a second lossy pass on pixels that were already compressed, so quality is never perfectly preserved.",
+      "Animated GIFs and SVGs are rejected. A canvas cannot preserve GIF animation and cannot re-encode vector art.",
+    ],
+    related: ["convert-image", "jpg-to-webp", "compress-image"],
+  },
+  {
+    slug: "crop-image",
+    category: "image",
+    name: "Crop Image",
+    summary: "Cut out an exact rectangle of pixels and discard the rest.",
+    description:
+      "Trim an image down to the region you need using pixel coordinates rather than a drag handle. Furtu decodes the image, copies the requested rectangle and re-encodes it, which is the precise way to produce a fixed-size asset for a template or a social card.",
+    icon: "crop",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(false),
+    limits: SINGLE,
+    controls: [
+      {
+        kind: "number",
+        id: "x",
+        label: "Left edge",
+        min: 0,
+        max: 40000,
+        step: 1,
+        default: 0,
+        suffix: "px",
+        help: "Distance from the left edge of the image. The origin is the top-left corner.",
+      },
+      {
+        kind: "number",
+        id: "y",
+        label: "Top edge",
+        min: 0,
+        max: 40000,
+        step: 1,
+        default: 0,
+        suffix: "px",
+      },
+      {
+        kind: "number",
+        id: "width",
+        label: "Crop width",
+        min: 1,
+        max: 40000,
+        step: 1,
+        default: 1200,
+        suffix: "px",
+        help: "Values beyond the image boundary are trimmed to fit rather than producing a broken file.",
+      },
+      {
+        kind: "number",
+        id: "height",
+        label: "Crop height",
+        min: 1,
+        max: 40000,
+        step: 1,
+        default: 1200,
+        suffix: "px",
+      },
+      {
+        kind: "select",
+        id: "format",
+        label: "Output format",
+        default: "auto",
+        options: [
+          { value: "auto", label: "Same as the original" },
+          { value: "image/png", label: "PNG — keeps transparency" },
+          { value: "image/jpeg", label: "JPG" },
+          { value: "image/webp", label: "WebP" },
+        ],
+      },
+    ],
+    keywords: [
+      "crop image",
+      "cut image",
+      "trim image",
+      "crop photo to size",
+      "extract part of image",
+    ],
+    synonyms: ["cut out", "trim", "clip", "chop", "take a section", "cut to size"],
+    mode: LOCAL,
+    faq: [
+      {
+        q: "How do I work out the coordinates?",
+        a: "The origin is the top-left corner, x runs right and y runs down, both in pixels. So a 1200×1200 square from the centre of a 3000×2000 photo would start at x = 900, y = 400. Any value that would run past the edge is trimmed to the image boundary and Furtu tells you in the result.",
+      },
+      {
+        q: "Does cropping reduce quality?",
+        a: "No resampling happens, because no pixels are scaled — the selected region is copied at its original size. The file is still re-encoded, so a lossy format goes through one compression pass. Crop from PNG and you keep it perfectly sharp.",
+      },
+      {
+        q: "Are my images uploaded?",
+        a: "No. The crop is performed in your browser on your own device. The image is never sent to a server, so cropping something confidential is safe.",
+      },
+      {
+        q: "Can I crop a batch of images?",
+        a: "This tool works on one image at a time, because a pixel rectangle that suits one picture rarely suits the next. To process a set identically, use “Resize Image”, which applies the same dimensions to every file.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add one image",
+        body: "Drop in the picture you want to crop. Furtu decodes it and shows its real pixel dimensions so the numbers mean something.",
+      },
+      {
+        title: "Enter the rectangle",
+        body: "Set the left and top edges and the width and height in pixels. Anything outside the image is trimmed to the boundary.",
+      },
+      {
+        title: "Download the cropped file",
+        body: "The selected region is copied at its original resolution and written out as a new file.",
+      },
+    ],
+    limitations: [
+      "The crop is a straight rectangle. Rounded corners, circular masks and freeform shapes are not available.",
+      "Cropping always re-encodes the file, so a JPG goes through one more lossy pass. Cropping a PNG stays lossless.",
+      "A crop rectangle entirely outside the image is rejected rather than producing an empty or corrupt file.",
+      "SVG and animated GIF are not supported here, because a canvas cannot re-encode vector art or keep GIF animation.",
+    ],
+    related: ["resize-image", "rotate-image", "flip-image"],
+  },
+  {
+    slug: "rotate-image",
+    category: "image",
+    name: "Rotate Image",
+    summary: "Turn an image 90°, 180° or 270° without softening it a single pixel.",
+    description:
+      "Fix an image that came out sideways or upside down. A quarter-turn or a half-turn moves pixels around without resampling anything, so unlike a free rotation in an editor the result is exactly as sharp as the original — the same operation your camera and phone do automatically.",
+    icon: "rotate",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(false),
+    limits: SINGLE,
+    controls: [
+      {
+        kind: "select",
+        id: "degrees",
+        label: "Turn by",
+        default: "90",
+        options: [
+          { value: "90", label: "90° clockwise" },
+          { value: "180", label: "180° — upside down" },
+          { value: "270", label: "90° anticlockwise" },
+          { value: "flip-h", label: "Mirror left to right" },
+          { value: "flip-v", label: "Mirror top to bottom" },
+        ],
+        help: "Only right-angle turns and mirrors are offered, because those are the transformations that cost no quality. There is no free arbitrary angle for good reason: any other angle has to resample every pixel, and the result is softer than the original.",
+      },
+      {
+        kind: "select",
+        id: "format",
+        label: "Output format",
+        default: "auto",
+        options: [
+          { value: "auto", label: "Same as the original" },
+          { value: "image/jpeg", label: "JPG" },
+          { value: "image/png", label: "PNG" },
+          { value: "image/webp", label: "WebP" },
+        ],
+      },
+    ],
+    keywords: [
+      "rotate image",
+      "turn image",
+      "fix sideways photo",
+      "rotate jpg",
+      "upside down image",
+    ],
+    synonyms: [
+      "turn",
+      "rotate 90",
+      "spin",
+      "sideways",
+      "upside down",
+      "landscape to portrait",
+      "orientate",
+    ],
+    mode: LOCAL,
+    faq: [
+      {
+        q: "Why is there no free rotation angle?",
+        a: "Because it costs you quality. Turning by 90°, 180° or 270° rearranges whole pixels and does not invent or discard any, so the result is bit-for-bit as sharp as the input. Any other angle — 15°, 37°, anything — has to interpolate every pixel, which softens the image slightly. Rather than give you a slider that quietly degrades your photo, Furtu offers the lossless options and mirrors.",
+      },
+      {
+        q: "Why did my photo come out sideways?",
+        a: "Cameras and phones record the intended orientation in a hidden EXIF tag rather than turning the pixels. Some editors and upload forms drop that tag, and the picture ends up on its side. Furtu applies the tag when decoding, so the image you see is the one you shoot, and this tool fixes the cases where the tag was lost.",
+      },
+      {
+        q: "Are the images uploaded?",
+        a: "No. The rotation is done in your browser. Nothing is transmitted, and nothing is kept after you close the tab.",
+      },
+      {
+        q: "Does rotating change the file size much?",
+        a: "Very little. The same pixels are rearranged, so a rotated JPG lands within a few per cent of the original. A large change means the encoder is behaving differently rather than the rotation costing anything.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your image",
+        body: "Drop in the picture. Furtu decodes it, applying any orientation tag the file already carries.",
+      },
+      {
+        title: "Choose the turn",
+        body: "Pick 90°, 180° or 270°, or one of the two mirror options for a sideways scan that needs reflecting rather than turning.",
+      },
+      {
+        title: "Download the corrected file",
+        body: "The pixels are rearranged and written out as a new image, in the same format as the original unless you choose otherwise.",
+      },
+    ],
+    limitations: [
+      "Only right-angle turns and mirror flips are available. An arbitrary angle is deliberately not offered because it resamples and softens the image.",
+      "The file is re-encoded, so a lossy format goes through one more compression pass. PNG is re-encoded losslessly.",
+      "SVG and animated GIF are not supported: a canvas cannot re-encode vector art or preserve GIF animation.",
+      "This tool handles one image at a time.",
+    ],
+    related: ["flip-image", "crop-image", "resize-image"],
+  },
+  {
+    slug: "flip-image",
+    category: "image",
+    name: "Flip Image",
+    summary: "Mirror an image left to right, top to bottom, or both at once.",
+    description:
+      "Reflect an image the way a mirror would. Useful for a scan that came out reversed, a product shot that needs the other way round, or a mirrored selfie — the transformation is a pure rearrangement of pixels, so nothing is softened or resampled.",
+    icon: "flip",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(false),
+    limits: SINGLE,
+    controls: [
+      {
+        kind: "select",
+        id: "direction",
+        label: "Mirror",
+        default: "horizontal",
+        options: [
+          { value: "horizontal", label: "Left to right" },
+          { value: "vertical", label: "Top to bottom" },
+          { value: "both", label: "Both — rotates by 180°" },
+        ],
+        help: "Mirroring on both axes is the same as turning the image by 180°.",
+      },
+      {
+        kind: "select",
+        id: "format",
+        label: "Output format",
+        default: "auto",
+        options: [
+          { value: "auto", label: "Same as the original" },
+          { value: "image/jpeg", label: "JPG" },
+          { value: "image/png", label: "PNG" },
+          { value: "image/webp", label: "WebP" },
+        ],
+      },
+    ],
+    keywords: [
+      "flip image",
+      "mirror image",
+      "reverse image horizontally",
+      "flip photo",
+      "mirror photo",
+    ],
+    synonyms: ["mirror", "flip", "reverse", "backwards", "turn around", "reflect"],
+    mode: LOCAL,
+    faq: [
+      {
+        q: "What is the difference between flipping and rotating?",
+        a: "Rotating turns the whole picture. Flipping reflects it like a mirror, so text or a face comes out the other way round. Mirroring on both axes at once is exactly the same as rotating by 180° — the result is identical, only the way you describe it differs.",
+      },
+      {
+        q: "Does mirroring reduce quality?",
+        a: "No. A mirror rearrangement moves whole pixels without calculating any new ones, so the output is exactly as sharp as the input. The file is still re-encoded, which costs a little on a lossy format, but the mirroring itself is free.",
+      },
+      {
+        q: "Are my images uploaded?",
+        a: "No. The flip is performed in your browser on your own device. No image is sent anywhere at any point.",
+      },
+      {
+        q: "Why did my scan come out mirrored?",
+        a: "Flatbed scanners with an automatic document feeder often invert one axis when the page is fed face down, and the resulting file is usually a JPEG with no reliable orientation data. Flipping it here fixes that in one step.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your image",
+        body: "Drop in the picture you want to mirror. Furtu decodes it and reads its true pixel dimensions.",
+      },
+      {
+        title: "Pick a direction",
+        body: "Mirror left to right, top to bottom, or both axes at once if you want the 180° equivalent.",
+      },
+      {
+        title: "Download the mirrored file",
+        body: "The pixels are reflected and written out as a new image, in the original format unless you pick another.",
+      },
+    ],
+    limitations: [
+      "Only whole-pixel mirror transformations are offered. Skewing, shearing and free rotation are not available because they resample the image.",
+      "The file is re-encoded, so a JPG goes through one more lossy pass. PNG is re-encoded losslessly.",
+      "SVG and animated GIF are not supported: a canvas cannot re-encode vector art or preserve GIF animation.",
+      "This tool handles one image at a time.",
+    ],
+    related: ["rotate-image", "crop-image", "resize-image"],
+  },
+  {
+    slug: "remove-image-metadata",
+    category: "image",
+    name: "Remove Image Metadata",
+    summary: "Strip EXIF, GPS and camera details from an image before you share it.",
+    description:
+      "Clear the hidden information a photo carries — GPS coordinates, camera and lens model, shooting timestamps, the software that edited it and any embedded preview. Furtu decodes the image and writes a new file that contains none of the original metadata, entirely in your browser.",
+    icon: "shield",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "select",
+        id: "format",
+        label: "Output format",
+        default: "auto",
+        options: [
+          { value: "auto", label: "Same as the original" },
+          { value: "image/jpeg", label: "JPG" },
+          { value: "image/png", label: "PNG" },
+          { value: "image/webp", label: "WebP" },
+        ],
+        help: "Keeping the original format is normally right. Furtu writes the new file at the highest quality the format allows, to keep the visible change as small as possible.",
+      },
+      {
+        kind: "number",
+        id: "quality",
+        label: "Quality",
+        min: 60,
+        max: 100,
+        step: 5,
+        default: 95,
+        suffix: "%",
+        help: "Ignored for PNG, which is lossless. A high value is right here because the goal is to change as little as possible.",
+      },
+    ],
+    keywords: [
+      "remove image metadata",
+      "strip exif data",
+      "remove gps data from photo",
+      "exif remover",
+      "clean photo data",
+    ],
+    synonyms: [
+      "strip exif",
+      "remove gps",
+      "scrub data",
+      "clean metadata",
+      "anonymise photo",
+      "remove location data",
+    ],
+    mode: LOCAL,
+    faq: [
+      {
+        q: "Does this really remove GPS coordinates?",
+        a: "Yes. Furtu decodes the image into a canvas and writes an entirely new file from the pixels it finds there. The new file is built from scratch, so nothing from the original metadata block can survive: no GPS coordinates, no camera or lens model, no serial number, no capture timestamp, no editing software, no IPTC keywords and no embedded thumbnail. The one thing that is not metadata is still there: the picture itself, exactly as it looked.",
+      },
+      {
+        q: "Are the images uploaded?",
+        a: "No, and that is the whole reason to do this in a browser. A privacy tool that uploaded your photo to a server in order to strip the location from it would be a strange trade. Furtu never transmits the file, so the coordinates never leave the device in the first place.",
+      },
+      {
+        q: "Is the resulting file the same as the original?",
+        a: "No, and this matters. Removing metadata means writing a new file, so the structure is different even though the picture looks the same. A JPG or WebP is re-encoded, which costs a small amount of quality, and the file may even be slightly smaller. The result is a new image that happens to look like the old one, not a byte-for-byte edit of the original — which also means any digital signature on the original no longer applies.",
+      },
+      {
+        q: "Could the picture end up the wrong way up?",
+        a: "The decoder applies the EXIF orientation tag, which is what you want: the image arrives upright. The risk is a very unusual orientation value that some decoders read differently. If a particular file comes out rotated or mirrored, run it through “Rotate Image” and Furtu will tell you the dimensions it actually received.",
+      },
+      {
+        q: "Does this work on a screenshot?",
+        a: "Yes, and it is still worth doing. Phone screenshots often carry the device name, the operating system version and the app version in their metadata, and a screenshot of a private message can carry a filename or a notification title. The rewrite removes all of it.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your images",
+        body: "Drop in the photos or screenshots you are about to share. Each is checked against its real file signature.",
+      },
+      {
+        title: "Choose the output",
+        body: "Keep the original format for a faithful result. Furtu writes the new file at the highest quality the format allows so the picture is barely altered.",
+      },
+      {
+        title: "Download the clean files",
+        body: "Every image is rebuilt pixel by pixel in your browser, and the result contains none of the original metadata.",
+      },
+    ],
+    limitations: [
+      "Removing metadata means re-encoding, so the output is a structurally new file. On JPG and WebP that costs a small amount of quality; PNG is re-encoded losslessly and keeps hard edges exactly.",
+      "An unusual EXIF orientation value can be interpreted differently by different decoders, which may leave a very occasional file rotated or mirrored. Furtu applies the orientation tag, so the normal case is correct.",
+      "Content that is part of the picture rather than the metadata is not removed. A username in a screenshot, a house number in a photo or a document visible in the frame still has to be dealt with separately.",
+      "SVG is rejected, and animated GIFs are rejected, because a canvas cannot re-encode vector art or preserve animation.",
+    ],
+    related: ["compress-image", "convert-image", "resize-image"],
+  },
+  {
+    slug: "compress-image-to-200kb",
+    category: "image",
+    name: "Compress Image to 200 KB",
+    summary: "Fit an image under 200 KB, keeping the best quality that still fits.",
+    description:
+      "Hit a 200 KB ceiling without guessing at a quality setting. Furtu searches for the highest quality that still lands under your target, and only shrinks the pixels if the target genuinely cannot be met at the original size — so you get the largest, sharpest image that fits rather than a thumbnail.",
+    icon: "lock",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "targetKb",
+        label: "Target size",
+        min: 20,
+        max: 2048,
+        step: 10,
+        default: 200,
+        suffix: "KB",
+        help: "The finished file is guaranteed to be at or under this. Raise it for more detail, lower it for a harder limit.",
+      },
+      {
+        kind: "number",
+        id: "minQuality",
+        label: "Quality floor",
+        min: 20,
+        max: 90,
+        step: 5,
+        default: 55,
+        suffix: "%",
+        help: "Furtu will not go below this quality to reach the target. If the target cannot be met at the floor and the original size, it reports that instead of producing an unusable file.",
+      },
+    ],
+    keywords: [
+      "compress image to 200kb",
+      "200kb image",
+      "image under 200 kb",
+      "make image 200kb",
+      "resize image to 200 kb",
+    ],
+    synonyms: [
+      "200kb",
+      "200 kb limit",
+      "max 200 kb",
+      "under 200kb",
+      "file size limit",
+      "attachment limit",
+      "hit the limit",
+    ],
+    mode: LOCAL,
+    seoTitle: "Compress Image to 200 KB — Exact File Size, No Upload",
+    seoDescription:
+      "Compress an image to 200 KB or less in your browser. Furtu finds the best quality that still fits, shrinking the pixels only when it has to. Nothing is uploaded and the achieved size is shown.",
+    faq: [
+      {
+        q: "How does Furtu hit exactly 200 KB?",
+        a: "It searches rather than guesses. Furtu keeps your original pixel dimensions and searches through quality values to find the highest one that still lands under 200 KB, then fills the remaining budget with the largest dimensions that still fit. Only if the target cannot be reached at your chosen quality floor does it scale the image down. The result is always at or under the target, and the note on each file tells you the quality and dimensions actually used.",
+      },
+      {
+        q: "What if 200 KB is simply not possible at a decent quality?",
+        a: "Then Furtu tells you. A 6000-pixel photo contains far more information than 200 KB can describe, so at some point the only way down is fewer pixels. Furtu will scale the image down while it still looks acceptable, and if the target is unreachable without going below your quality floor — or below 64 pixels on the long edge — it stops and reports that rather than handing you an unusable file.",
+      },
+      {
+        q: "Are my images uploaded?",
+        a: "No. Every search step happens in your browser. The image is decoded once and then re-encoded locally several times while Furtu finds the best fit, and nothing is transmitted to any server.",
+      },
+      {
+        q: "Does Furtu keep my image at full size?",
+        a: "Wherever it can, yes. If 200 KB is comfortable for the picture at full resolution, you get the original dimensions back. Furtu only reduces the pixel dimensions when the target cannot be met by quality alone, and it always says which happened in the note next to the file.",
+      },
+      {
+        q: "Why WebP rather than JPG?",
+        a: "WebP is simply the better encoder at this job. At the same visual quality it usually produces 25–35% fewer bytes than JPG, which means more of your 200 KB budget goes into the picture. Furtu prefers WebP and falls back to JPG only when the browser will not encode WebP, and it says which format you actually got.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your images",
+        body: "Drop in the file that has to fit the limit. Up to 20 at once, each checked against its real file signature.",
+      },
+      {
+        title: "Set the target and the floor",
+        body: "200 KB is the default. The quality floor is the point below which Furtu refuses to go, so you stay in control of how far it will trade quality for size.",
+      },
+      {
+        title: "Download the fitted files",
+        body: "Each file comes back with its achieved size, the quality used and whether the dimensions had to change.",
+      },
+    ],
+    limitations: [
+      "The target is a ceiling, not a promise of hitting it exactly. Furtu aims to get as close to the limit from below as it can without exceeding it.",
+      "A very large image may only fit the target after being scaled down. When that happens the note tells you the original and the new dimensions, so the trade is never silent.",
+      "If the target is unreachable at your quality floor, or the image would have to shrink below 64 pixels on the long edge to fit, Furtu stops and reports it instead of producing a broken-looking result.",
+      "SVG and animated GIF are not supported. Both are rejected, because a canvas cannot re-encode vector art or preserve GIF animation.",
+    ],
+    related: ["compress-image-to-50kb", "compress-image", "jpg-to-webp", "convert-image"],
+  },
+  {
+    slug: "compress-image-to-50kb",
+    category: "image",
+    name: "Compress Image to 50 KB",
+    summary: "Squeeze an image under 50 KB for the places that will not allow more.",
+    description:
+      "Meet a 50 KB limit — an email signature, a contact form, a marketplace thumbnail, a CMS with a hard cap — without ending up with an unreadable thumbnail. Furtu searches for the best quality that fits, shrinks the pixels only as far as it has to, and reports exactly what it did.",
+    icon: "spark",
+    workspace: "files",
+    engine: "image",
+    input: IMAGE_INPUT(true),
+    limits: BATCH_20,
+    controls: [
+      {
+        kind: "number",
+        id: "targetKb",
+        label: "Target size",
+        min: 10,
+        max: 2048,
+        step: 10,
+        default: 50,
+        suffix: "KB",
+        help: "The finished file is guaranteed to be at or under this. 50 KB is a hard limit for a lot of forms, so this is the setting most people need.",
+      },
+      {
+        kind: "number",
+        id: "minQuality",
+        label: "Quality floor",
+        min: 15,
+        max: 90,
+        step: 5,
+        default: 40,
+        suffix: "%",
+        help: "The lowest quality Furtu will use. At a target this small the image usually has to lose pixels as well as quality, so this floor is what stops it going too far.",
+      },
+    ],
+    keywords: [
+      "compress image to 50kb",
+      "50kb image",
+      "image under 50 kb",
+      "make image 50kb",
+      "small image file size",
+    ],
+    synonyms: [
+      "50kb",
+      "50 kb limit",
+      "max 50 kb",
+      "under 50kb",
+      "tiny image",
+      "thumbnail size",
+      "email signature size",
+    ],
+    mode: LOCAL,
+    seoTitle: "Compress Image to 50 KB — Small File, No Upload",
+    seoDescription:
+      "Make an image 50 KB or smaller in your browser. Furtu finds the best quality that fits, shrinks the pixels only when it has to, and shows the achieved size. Nothing is uploaded.",
+    faq: [
+      {
+        q: "Is 50 KB realistic for a photo?",
+        a: "For a full-resolution photograph, no — and pretending otherwise would be dishonest. 50 KB is roughly what a 640×480 image looks like at a decent quality. Furtu therefore does two things: it searches for the best quality that fits, and if that is not enough it reduces the pixel dimensions step by step, stopping as soon as the file fits. You get the largest image that honours the limit, not a squashed version of the original.",
+      },
+      {
+        q: "What happens if the image cannot get that small?",
+        a: "Furtu stops and tells you rather than producing something unusable. There are two points where it gives up: when it would have to go below your quality floor, or when the long edge would fall below 64 pixels, which is too small to be worth returning. Raise the target, lower the floor, or accept a smaller image on purpose.",
+      },
+      {
+        q: "Are the images uploaded?",
+        a: "No. The search for the right quality and size runs entirely in your browser on your own device. Nothing is transmitted, which is exactly what you want for the images people are forced to shrink — passport photos, ID documents, signatures, avatars.",
+      },
+      {
+        q: "Will it shrink the dimensions as well as the quality?",
+        a: "Yes, but only when it has to. Furtu first tries to reach the target at your original dimensions by lowering quality alone. If that fails it scales the image down and searches again, then walks the dimensions back up to fill the budget as fully as possible. The note on each file states whether the dimensions changed and gives the original size.",
+      },
+      {
+        q: "Which format does it produce?",
+        a: "WebP, wherever the browser supports it, because WebP needs noticeably fewer bytes than JPG for the same perceived quality and so keeps more of your 50 KB budget. If your browser will not encode WebP, Furtu falls back to JPG and names the file accordingly.",
+      },
+    ],
+    howItWorks: [
+      {
+        title: "Add your images",
+        body: "Drop in the file that has to fit 50 KB. Up to 20 at once, each validated before it is decoded.",
+      },
+      {
+        title: "Set the target and the floor",
+        body: "50 KB is the default. The quality floor is the line Furtu will not cross, so a very aggressive limit cannot quietly destroy the picture.",
+      },
+      {
+        title: "Download the fitted files",
+        body: "Each file comes back with its achieved size, the quality used, and the dimensions — including whether they had to be reduced.",
+      },
+    ],
+    limitations: [
+      "At this size the pixel dimensions usually have to be reduced, not just the quality. The note on every file states the original and the new size so the trade is visible.",
+      "The target is a ceiling rather than an exact figure, though Furtu aims to land as close under it as possible.",
+      "If the target is unreachable at your quality floor, or below 64 pixels on the long edge, Furtu reports the problem instead of returning a file that is too small to be usable.",
+      "SVG and animated GIF are rejected. A canvas cannot re-encode vector art or preserve GIF animation, so both are refused with an explanation.",
+    ],
+    related: ["compress-image-to-200kb", "compress-image", "jpg-to-webp", "webp-to-jpg"],
+  },
+];
+
+export default IMAGE_TOOLS;
