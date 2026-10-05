@@ -1,5 +1,4 @@
 {
-  "$comment": "There is deliberately NO `rewrites` entry here. The previous config rewrote every path to /404.html, which Vercel applies only after the filesystem check — so the 84 real pages resolved fine and every *unknown* URL was served the 404 page with a 200 status. That is a soft 404: search engines index it as a real page, and it makes the site look far larger and considerably worse than it is. With no rewrites, Vercel serves the prerendered files and returns a genuine 404 with the prerendered 404 body for anything else. `cleanUrls` is what makes /tools resolve to /tools/index.html.",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
