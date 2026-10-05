@@ -124,24 +124,73 @@ FURTU_BASE=https://staging.example node scripts/browser-audit.mjs
 
 ## Checklist
 
-- [ ] `LICENSE` replaced with a real choice (see the placeholder)
 - [ ] Host serves real files, directory indexes, and a true 404 — verified with
       `FURTU_BASE=<url> node scripts/browser-audit.mjs`
 - [ ] `https` enforced, `www`/apex redirect decided
-- [ ] Fonts load from Google Fonts, or self-hosted if a privacy commitment is
-      being made about third-party requests (see below)
 - [ ] `sitemap.xml` and `robots.txt` reachable at the domain root
 - [ ] `404.html` returns status 404
 - [ ] Cache headers set as above
+- [ ] `/favicon.svg`, `/apple-touch-icon.png`, `/og-image.png` and
+      `/site.webmanifest` all return 200 (the audit now catches a missing icon
+      as a broken internal link)
+- [ ] `node scripts/browser-audit.mjs <your-url>` reports no third-party origins
 
-## A note on the web fonts
+## The web fonts are self-hosted
 
-The design loads Inter, IBM Plex Mono and Source Serif 4 from Google Fonts.
-That is a request to a third party, and it is the **only** one the site makes —
-no file, filename or size ever leaves the device, but the font request still
-reveals an IP address and referrer to Google.
+They used to come from Google Fonts, which meant every page view handed the
+visitor's IP address to Google. That is a real GDPR exposure in the EU, and the
+privacy page had to disclose it — an asterisk on the one claim the product is
+built around.
 
-That is a normal, disclosed trade-off, and the privacy page says files are never
-uploaded rather than making a broader claim. If that is not acceptable for the
-deployment, self-host the three families and drop the `<link>` to
-`fonts.googleapis.com`; no other change is needed.
+All three families are SIL Open Font License 1.1, which permits redistribution
+and embedding in web software. `scripts/fetch-fonts.mjs` downloads them and
+generates `src/fonts.css`; the files land in `public/fonts/`. Run it only when
+the weights change:
+
+```bash
+npm run assets:fonts
+```
+
+**Two traps worth knowing about, both of which happened here:**
+
+1. **The prerenderer has its own HTML shell.** `index.html` at the repo root
+   only feeds the dev server. All 84 built pages come from the template in
+   `scripts/prerender.mjs`, which carried its own pair of Google Fonts
+   preconnects. Removing them from `index.html` changed the dev server and left
+   every built page still calling Google. If you add a `<link>` to `index.html`
+   expecting it to appear in the build, check the prerenderer too.
+
+2. **Google silently ignores parameters it does not recognise.** A malformed
+   stylesheet request returns a *valid, shorter* stylesheet rather than an
+   error, so the fetch script printed "fetched 6 files" and reported success
+   while quietly dropping two of three families — and the site would have
+   shipped with two typefaces silently falling back to the system stack. No test
+   failed. The script now asserts every expected family came back and throws.
+
+The SEO audit now also fails the build if any page references a third-party
+origin, so neither can regress silently.
+
+## Vercel
+
+`vercel.json` is included and correct. Import the repo in the Vercel dashboard
+and it will build on every push.
+
+**Do not add a catch-all rewrite.** An earlier version had:
+
+```json
+"rewrites": [{ "source": "/(.*)", "destination": "/404.html" }]
+```
+
+Vercel applies rewrites *after* the filesystem check, so the 84 real pages
+resolved fine and every unknown URL was served the 404 page **with a 200
+status**. That is a soft 404: search engines index it as a real page, and it
+makes the site look far larger and considerably worse than it is. With no
+rewrites, Vercel serves the prerendered files and returns a genuine 404.
+
+Build settings: framework preset **Vite**, build command `npm run build`,
+output directory `dist`. Node 20.19 or newer.
+
+After the first deploy, check one deep link end to end —
+`https://furtu.xyz/tools/pdf/merge-pdf` must return the tool page, not the
+homepage and not a 404. That single URL catches the most common misconfiguration
+for a prerendered site.

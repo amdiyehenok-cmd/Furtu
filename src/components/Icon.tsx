@@ -66,12 +66,21 @@ export function Icon({ name, size = 20, className }: { name: IconName; size?: nu
   );
 }
 
+/**
+ * The header wordmark glyph.
+ *
+ * This was three stacked bars in a rounded outline — a generic abstract mark.
+ * It is now the product's own F, inlined rather than loaded from
+ * `/favicon.svg` so it costs no request and inherits `currentColor` for the
+ * dark theme. Same geometry as the favicon: one path for the whole letterform,
+ * so the arms and the stem never show a seam where they meet.
+ */
 export function Mark() {
   return (
     <span className="brand-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
+      <svg viewBox="0 0 64 64" focusable="false">
+        <path d="M17 14h30v10H28v7h16v9H28v10H17V14Z" />
+      </svg>
     </span>
   );
 }

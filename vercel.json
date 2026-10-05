@@ -1,5 +1,30 @@
 {
+  "$comment": "There is deliberately NO `rewrites` entry here. The previous config rewrote every path to /404.html, which Vercel applies only after the filesystem check — so the 84 real pages resolved fine and every *unknown* URL was served the 404 page with a 200 status. That is a soft 404: search engines index it as a real page, and it makes the site look far larger and considerably worse than it is. With no rewrites, Vercel serves the prerendered files and returns a genuine 404 with the prerendered 404 body for anything else. `cleanUrls` is what makes /tools resolve to /tools/index.html.",
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [{ "source": "/(.*)", "destination": "/404.html" }]
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), interest-cohort=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" }
+      ]
+    }
+  ]
 }

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Furtu">
+  <!--
+    Browser-tab icon.
+
+    This is a redrawn, flattened version of brand/icon-source.png rather than a
+    copy of it. The supplied artwork is a glossy 3D render: it carries a
+    specular highlight across the top of the letterform, an outer bloom, and a
+    bevelled edge. At 16 pixels none of that survives — it averages into a
+    grey-blue smear and the letterform stops being legible, which is the one job
+    a favicon has.
+
+    So the composition is kept — dark tile, blue ribbon F, the same proportions
+    and the same light-to-dark gradient down the letterform — and the rendering
+    effects are dropped. At 180 pixels and up, where there is room for them,
+    public/apple-touch-icon.png and public/og-image.png use the original render.
+  -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#111C33" />
+      <stop offset="1" stop-color="#070C18" />
+    </linearGradient>
+    <linearGradient id="mark" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#E3F0FF" />
+      <stop offset="0.45" stop-color="#7FB2F5" />
+      <stop offset="1" stop-color="#2C6BE0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#tile)" />
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#3B82F6" stroke-opacity="0.55" stroke-width="1.5" />
+
+  <!-- The ribbon F. One path so the arms and stem share a single gradient and
+       never show a seam where they meet. -->
+  <path fill="url(#mark)" d="M17 14h30v10H28v7h16v9H28v10H17V14Z" />
+</svg>

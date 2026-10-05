@@ -165,3 +165,11 @@
 *.ps1 text eol=crlf
 
 tests/fixtures/*.pdf -filter -diff -merge -text
+public/fonts/*.woff2 -filter -diff -merge -text
+
+# Icons and the share card, same reasoning: the largest is ~200 KB and there are
+# five of them. Routing these through LFS would make `git lfs pull` a
+# prerequisite for a working favicon, and an OG image stored as a pointer is a
+# share card that renders as nothing for anyone whose LFS is not installed.
+brand/*.png -filter -diff -merge -text
+public/*.png -filter -diff -merge -text

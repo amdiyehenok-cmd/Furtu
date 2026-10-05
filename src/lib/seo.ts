@@ -251,11 +251,25 @@ export function headTags(meta: PageMeta, cssHref?: string): HeadTag[] {
     { tag: 'meta', attrs: { property: 'og:title', content: meta.title } },
     { tag: 'meta', attrs: { property: 'og:description', content: meta.description } },
     { tag: 'meta', attrs: { property: 'og:url', content: meta.canonical } },
+    // Previously `summary_large_image` was declared with no image attached,
+    // which is a contradiction: the card asked for a large image and then
+    // supplied none, so every share rendered as bare text. The image is served
+    // from this origin, like everything else.
+    { tag: 'meta', attrs: { property: 'og:image', content: `${SITE.origin}/og-image.png` } },
+    { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+    { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+    { tag: 'meta', attrs: { property: 'og:image:alt', content: 'Furtu — fast, private tools for PDFs, images and data' } },
     { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
     { tag: 'meta', attrs: { name: 'twitter:title', content: meta.title } },
     { tag: 'meta', attrs: { name: 'twitter:description', content: meta.description } },
+    { tag: 'meta', attrs: { name: 'twitter:image', content: `${SITE.origin}/og-image.png` } },
     { tag: 'meta', attrs: { name: 'theme-color', content: SITE.themeColor } },
     { tag: 'meta', attrs: { name: 'color-scheme', content: 'light dark' } },
+    // There was no icon at all before this, so every visitor's browser
+    // requested /favicon.ico and received a 404.
+    { tag: 'link', attrs: { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' } },
+    { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' } },
+    { tag: 'link', attrs: { rel: 'manifest', href: '/site.webmanifest' } },
   ];
 
   if (cssHref) tags.push({ tag: 'link', attrs: { rel: 'stylesheet', href: cssHref } });

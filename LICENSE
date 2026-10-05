@@ -1,35 +1,81 @@
-# FURTU licence
+FURTU
+Copyright (c) 2026 Furtu. All rights reserved.
 
-**This decision has not been made yet, and this file is a placeholder.**
+NOTICE: This repository is published for viewing and inspection. It is not
+open source, and no licence to use, copy, modify or redistribute it is granted.
 
-FURTU's own licence was not specified in the brief, and choosing one is a
-business decision rather than an engineering one. This file therefore does not
-assert a licence. Until it is replaced, the default legal position applies:
-**all rights reserved**, nobody is granted permission to copy, modify or
-redistribute this work.
+1. PERMISSION
 
-## What to do
+   You may view this repository and read its contents. That is the extent of
+   the permission granted.
 
-Pick one and replace this file wholesale.
+   You may not, without a separate written agreement with the copyright
+   holder:
 
-- **Open source** — MIT or Apache-2.0 both work and both are compatible with
-  every dependency in `THIRD-PARTY-NOTICES.md`. MIT is the shortest to adopt and
-  is what `pdf-lib`, `js-yaml`, `qrcode` and `fflate` already use, so MIT is the
-  frictionless default. Apache-2.0 adds an explicit patent grant.
-- **Proprietary** — delete this file and replace it with a copyright notice plus
-  whatever terms the client requires. No other file needs to change; nothing in
-  the build reads it.
+     - copy this software, in whole or in part, into any other project;
+     - modify, adapt, translate or create derivative works from it;
+     - redistribute it, whether modified or unmodified, as source, as a
+       compiled artefact, or as a hosted or packaged application;
+     - sublicense, rent, lease, sell or otherwise commercialise it;
+     - use it, or any part of it, to provide a product or service to a third
+       party, whether competing or not.
 
-## Note on the dependencies
+   A public GitHub repository is not an invitation to fork. The source is
+   visible so the behaviour can be audited and verified; visibility is not
+   permission.
 
-Whatever is chosen here, it cannot conflict with the shipped dependencies. All
-seven runtime libraries are MIT or Apache-2.0, both of which permit relicensing
-of the combined work under compatible terms. There is no copyleft obligation
-anywhere in `dist/`.
+2. TRADEMARKS
 
-## Dependencies of the design source
+   "Furtu", the F mark and the product name are trademarks of the copyright
+   holder. This licence grants no right to use them.
 
-The visual design supplied with this project is treated as first-party material
-for licensing purposes. If the design actually originated elsewhere, its terms
-should be checked before this project is published — see section 3 of
-`THIRD-PARTY-NOTICES.md`.
+3. THIRD-PARTY COMPONENTS
+
+   This software incorporates open-source components under their own licences.
+   Those licences govern those components and are unaffected by this document.
+   See THIRD-PARTY-NOTICES.md for the full list with licence texts.
+
+   In particular, the web fonts served from /fonts are redistributed under the
+   SIL Open Font License 1.1. See public/fonts/OFL.txt. The SIL OFL permits
+   redistribution and embedding in web software; it does not permit the fonts
+   to be sold on their own.
+
+4. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+   OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+5. TERMINATION
+
+   This licence terminates automatically if you breach any of its terms. On
+   termination you must stop using the software and delete any copy you hold.
+
+6. CONTACT
+
+   Licensing enquiries: the contact address published at
+   https://furtu.xyz/contact/
+
+--------------------------------------------------------------------------------
+
+Note for the copyright holder
+------------------------------
+
+This file was written to reflect the decision to publish this project without
+an open-source licence. It is a starting point and has NOT been reviewed by a
+lawyer, which matters here for two specific reasons:
+
+  - Several jurisdictions (notably Germany, and France for commercial terms)
+    require certain mandatory consumer rights to be preserved in a proprietary
+    licence. Restricting use entirely may not be enforceable against consumers
+    in those places.
+  - A repository published without a licence is, by default, "all rights
+    reserved" — so the absence of a licence would already have had much of this
+    effect. This file makes it explicit rather than implied, which is clearer
+    for readers but does not add protection.
+
+Get it reviewed before you rely on it commercially.

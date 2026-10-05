@@ -25,6 +25,18 @@ npm run verify     # typecheck + tests + build + SEO audit
   structured data are in the HTML a crawler receives.
 - **130 KB brotli first load**, with 1.17 MB of PDF, image, ZIP, YAML and QR
   codecs behind dynamic imports that only load if you open a matching tool.
+- **No third-party origin, at all.** Fonts are self-hosted, there is no
+  analytics, no tag manager and no CDN. The SEO audit fails the build if a
+  single page references an external origin, so the claim cannot quietly rot.
+
+## Licence
+
+Proprietary — all rights reserved. See [`LICENSE`](LICENSE). The repository is
+public so the behaviour can be audited, not so it can be forked; no permission
+to use, copy, modify or redistribute it is granted.
+
+Third-party components keep their own licences; see
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Commands
 

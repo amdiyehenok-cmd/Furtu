@@ -464,7 +464,107 @@ This is enforced rather than asserted:
   towards boilerplate.
 - A test asserts no tool currently claims a non-local mode.
 
-## 15. Risks and limitations
+### 14.1 No third-party origin, enforced by the audit
+
+The site used to make exactly one request to a third party: the Google Fonts
+stylesheet, linked in `index.html` and imported again in `src/index.css`. So the
+browser fetched it twice, from two origins, on every page view, before render.
+Disclosed honestly on the privacy page — but disclosing an IP-address handover is
+not the same as not doing it, and in the EU it is a genuine GDPR exposure.
+
+Removing it surfaced two things worth recording:
+
+1. **The prerenderer has its own HTML shell.** `index.html` feeds the dev
+   server only. All 84 built pages come from a template inside
+   `scripts/prerender.mjs`, which carried its own pair of preconnect links.
+   Deleting them from `index.html` changed the dev server and left every built
+   page still calling Google. This is the same class of bug as the entry-script
+   omission in §13.1: a second HTML shell that nobody remembers exists.
+2. **Google Fonts silently ignores request parameters it does not recognise**,
+   returning a valid *shorter* stylesheet rather than an error. The first
+   version of `scripts/fetch-fonts.mjs` omitted a `family=` prefix and received
+   only one of three families, printed `fetched 6 files` and exited zero. The
+   build would have shipped with two of three typefaces silently falling back
+   to the system stack. The script now asserts every expected family is present
+   and throws otherwise.
+
+Both are now checked rather than fixed: `audit:seo` fails the build if any page
+references a third-party origin, and prints `None — every asset is served from
+this origin` when it passes.
+
+### 14.2 Self-hosting, and what it actually cost
+
+`scripts/fetch-fonts.mjs` downloads the woff2 files and generates
+`src/fonts.css`. Inter and Source Serif 4 are variable fonts, so Google serves
+**one file per family+subset** and references it from every weight's `@font-face`
+rule. The first version keyed output filenames on family *and* weight, which
+wrote 119 KB of Source Serif out four times and 47 KB of Inter out seven times.
+
+| | Stored | Loaded by an English page |
+| --- | --- | --- |
+| Naive | 1,868 KB | ~880 KB |
+| Deduplicated by content hash | **432 KB** | **211 KB** |
+
+Only the `latin` and `latin-ext` subsets are fetched; the other 76 files the API
+offers cover cyrillic, greek and vietnamese, which an English page never
+renders. All three families are SIL OFL 1.1, which permits redistribution and
+embedding — see `public/fonts/OFL.txt`.
+
+## 15. Brand presence, and an icon
+
+Two related changes were made after the first release.
+
+### The palette was neutral
+
+The design shipped with seven neutrals and one blue: `#f8fafc`, `#ffffff`,
+`#f1f5f9`, `#0f172a`, `#64748b`, `#94a3b8`, `#e2e8f0`, `#cbd5e1`, and
+`--brand: #1e3a8a`. The brand colour did appear 59 times, but almost entirely as
+button fills, link text and small kicker labels, while `var(--border)` alone was
+used 68 times. Every large surface — the hero, the section bands, the card grid,
+the page headers — was grey. Read as a whole that is a black-and-white site with
+a blue accent, not a blue product.
+
+So the palette gained an 11-stop ramp (`--brand-50` … `--brand-950`) plus
+translucent ring, edge and wash tokens, and the brand was given weight at the
+scale the neutrals had:
+
+- **Hero** — a two-source radial wash behind the headline, under the text rather
+  than boxing it in.
+- **Section bands** — `--brand-wash` on two of the bands. Two, not all: washing
+  every one flattens the page and loses the alternating rhythm.
+- **Card grid** — brand-tinted edges, and on hover a shadow cast in brand rather
+  than black, which is what makes it read as blue interacting with the surface.
+- **Icon tiles** — were a pale tint with brand-coloured glyphs, which is correct
+  and nearly invisible at 42px. Now filled.
+- **Primary button** — was hardcoded `#1e3a8a`, so it ignored the theme entirely
+  and stayed dark navy even where the brand had gone light. Now a short
+  gradient over tokens, legible in both themes.
+- **Focus** — the global outline already used the brand colour; it now carries a
+  soft ring, because a 2px hairline is easy to lose against the new blue edges.
+
+The restraint of the original design is deliberately kept: no neon, no
+glassmorphism, no gradient-heavy panels. Only the colour balance changed.
+
+### The icon
+
+The supplied artwork is a glossy 3D render — a specular highlight across the top
+of the letterform, an outer bloom, a bevelled edge. Used verbatim as a 16-pixel
+tab icon it averages into a grey-blue smear and the letterform stops being
+legible, which is the one job a favicon has.
+
+So the icon is a **redrawn, flattened** version for small sizes: same composition
+(dark tile, blue ribbon F, same proportions, same light-to-dark gradient down the
+letterform), rendering effects dropped. It exists three times — `public/favicon.svg`,
+the inlined header `Mark()`, and inside the OG image — all sharing one path, so
+they cannot drift apart. At 180 pixels and up, where there is room for the detail,
+the original render is used (`apple-touch-icon.png`, `og-image.png`).
+
+The OG image is **generated from HTML** by `scripts/make-og-image.mjs` using the
+same font files the site serves, so the share card cannot fall out of step with
+the site's own design. It was previously declared `summary_large_image` with no
+image attached at all — every share rendered as bare text.
+
+## 16. Risks and limitations
 
 **Real risks:**
 
@@ -476,8 +576,11 @@ This is enforced rather than asserted:
 2. **Image engine has no unit coverage.** It executes correctly on a real canvas
    in the browser sweep, but there is no CI-gated assertion over it. A Node
    canvas implementation would close this.
-3. **FURTU's own licence is undecided.** `LICENSE` is an explicit placeholder.
-   Nothing breaks, but it must be chosen before publishing.
+3. **FURTU's own licence has not been legally reviewed.** `LICENSE` now states
+   proprietary / all-rights-reserved, which is the intended commercial position,
+   but it was written without a lawyer and it says so. Some jurisdictions
+   require mandatory consumer rights to survive a proprietary licence, so get it
+   checked before relying on it to stop a particular party.
 4. **Entry bundle is 124 KB brotli.** Acceptable, dominated by react-dom, but the
    tool-definition data is the reducible part and the trade-off is documented
    rather than taken.
@@ -486,17 +589,21 @@ This is enforced rather than asserted:
 6. **The hosting trap is documented, not enforced.** `scripts/serve-dist.mjs`
    behaves correctly and `docs/DEPLOYMENT.md` explains why `vite preview` does
    not, but nothing prevents a future deployment target from reintroducing
-   SPA-fallback-on-every-path.
+   SPA-fallback-on-every-path. The Vercel config that once did this is fixed.
+7. **Fonts are a committed build input, not fetched at deploy time.** The woff2
+   files are in the repository, so a build works offline and offline, but
+   upstream re-encoding will not be picked up. Run `npm run assets:fonts`
+   deliberately.
 
 **Honest limitations the product itself states:** no OCR, no PDF encryption,
 structural compression only, and every individual tool's own limitations are
 rendered on its page.
 
-## 16. Next steps
+## 17. Next steps
 
 **Before publishing:**
 
-1. Choose FURTU's licence and replace `LICENSE`.
+1. Get the proprietary `LICENSE` reviewed by a lawyer.
 2. Confirm the design's provenance.
 3. Point DNS at the chosen host and verify a deep link such as
    `/tools/pdf/merge-pdf` returns the tool page rather than the homepage. This

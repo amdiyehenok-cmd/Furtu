@@ -99,14 +99,22 @@ export default function PrivacyPage() {
       <section aria-labelledby="third-parties">
         <h2 id="third-parties">Third parties</h2>
         <p>
-          Furtu serves web fonts from Google Fonts, which means your browser makes a request to Google's
-          servers when the page loads. That request is separate from your files — no file information is
-          involved — but it is worth being explicit about.
+          Furtu makes no requests to any third-party origin. There is no analytics script, no tag
+          manager, no advertising pixel and no CDN in front of the site. Every asset — scripts,
+          stylesheets, fonts and images — is served from this origin, so no other company sees your
+          IP address, your browser details or your visit.
         </p>
         <p>
-          No file or pasted text is shared with any third party, because none of it ever leaves your browser.
-          The complete list of open-source components Furtu builds on, with their licences, is in the
-          third-party notices in the project repository.
+          This used to be false. The site loaded its web fonts from Google Fonts, which meant every
+          page view handed your IP address to Google before anything else happened, and this page
+          had to disclose it. The fonts are now served from this origin instead, so the asterisk is
+          gone. Inter, IBM Plex Mono and Source Serif 4 are all licensed under the SIL Open Font
+          License, which permits exactly that.
+        </p>
+        <p>
+          No file or pasted text is shared with any third party, because none of it ever leaves your
+          browser. The complete list of open-source components Furtu builds on, with their licences,
+          is in the third-party notices in the project repository.
         </p>
       </section>
 

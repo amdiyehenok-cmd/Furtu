@@ -1,10 +1,32 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;450;500;550;600;650;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,650&display=swap");
+@import "./fonts.css";
 @import "tailwindcss";
 
 :root {
   --brand: #1e3a8a;
   --brand-hover: #172f73;
   --brand-soft: #eef2ff;
+  /* The palette above was seven neutrals and one blue, so the product read as
+     black-and-white with a blue button. These are the tints the deeper brand
+     presence is built from. Deliberately a ramp rather than extra one-off
+     values, so surfaces, borders and text can each sit at the right depth
+     instead of all landing on the same #1e3a8a. */
+  --brand-950: #0d1733;
+  --brand-900: #16255c;
+  --brand-800: #1e3a8a;
+  --brand-700: #2447b0;
+  --brand-600: #2f5fd0;
+  --brand-500: #3b7ce8;
+  --brand-400: #6b9ff5;
+  --brand-300: #9cc0fa;
+  --brand-200: #c7dbfd;
+  --brand-100: #dfe9fe;
+  --brand-50: #f1f6ff;
+  /* Translucent brand, for the places a solid fill would be too heavy. */
+  --brand-ring: rgba(30, 58, 138, 0.30);
+  --brand-edge: rgba(30, 58, 138, 0.16);
+  --brand-edge-strong: rgba(30, 58, 138, 0.34);
+  --brand-wash: #f4f7ff;
+  --brand-wash-strong: #e8effe;
   --background: #f8fafc;
   --surface: #ffffff;
   --surface-subtle: #f1f5f9;
@@ -33,6 +55,26 @@
   --brand: #8da6f4;
   --brand-hover: #a6b9f7;
   --brand-soft: #182554;
+  /* In dark mode the light end of the ramp carries the colour, so the wash
+     sits under the surfaces and the ring sits on top of them. Using the same
+     values as light mode here would put pale blue on near-black at a contrast
+     that fails WCAG. */
+  --brand-950: #060b18;
+  --brand-900: #0b1330;
+  --brand-800: #131f47;
+  --brand-700: #1b2b63;
+  --brand-600: #2f5fd0;
+  --brand-500: #4d7fe6;
+  --brand-400: #8da6f4;
+  --brand-300: #a9bdf7;
+  --brand-200: #c6d3fa;
+  --brand-100: #dee6fd;
+  --brand-50: #eef2ff;
+  --brand-ring: rgba(141, 166, 244, 0.55);
+  --brand-edge: rgba(141, 166, 244, 0.20);
+  --brand-edge-strong: rgba(141, 166, 244, 0.42);
+  --brand-wash: #0e1830;
+  --brand-wash-strong: #132048;
   --background: #0b1220;
   --surface: #111c2e;
   --surface-subtle: #162236;
@@ -67,11 +109,21 @@ button { color: inherit; }
 }
 .nav-container { height: 68px; max-width: 1240px; margin: auto; padding: 0 24px; display: flex; align-items: center; gap: 42px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; letter-spacing: .18em; }
-.brand-mark { width: 25px; height: 25px; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 2px; padding: 4px; color: var(--brand); border: 1.5px solid currentColor; border-radius: 7px; transform: rotate(-1deg); }
-.brand-mark span { display: block; background: currentColor; border-radius: 1px; }
-.brand-mark span:nth-child(1) { height: 45%; }
-.brand-mark span:nth-child(2) { height: 100%; }
-.brand-mark span:nth-child(3) { height: 70%; }
+.brand-mark { width: 26px; height: 26px; display: grid; place-items: center; color: var(--brand); border-radius: 7px; transform: rotate(-1deg); }
+.brand-mark svg { width: 100%; height: 100%; display: block; }
+/* The glyph is a solid mark, not a glyph-on-tint, so the fill is a short
+   gradient rather than `currentColor` flat — the same light-to-dark falloff as
+   the favicon and the app icon. */
+.brand-mark path { fill: currentColor; }
+.site-header .brand-mark {
+  color: var(--brand-600);
+  background: linear-gradient(150deg, var(--brand-100) 0%, var(--brand-200) 100%);
+  box-shadow: 0 2px 8px -3px var(--brand-ring);
+}
+[data-theme="dark"] .site-header .brand-mark {
+  color: var(--brand-200);
+  background: linear-gradient(150deg, var(--brand-800) 0%, var(--brand-900) 100%);
+}
 .desktop-nav { display: flex; align-items: center; gap: 28px; }
 .desktop-nav a { font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: color var(--transition); }
 .desktop-nav a:hover { color: var(--text); }
@@ -1025,3 +1077,148 @@ html { scroll-padding-top: 88px; }
 /* The sample button sits inside the drop zone, which is itself a button-like
    target. Stopping propagation stops one press doing two things. */
 .dropzone .link-button { position: relative; z-index: 1; }
+
+/* ==========================================================================
+   Brand presence
+
+   The palette this site shipped with was seven neutrals and one blue. The brand
+   colour did appear 59 times, but almost entirely as button fills, link text
+   and small kicker labels. Every large surface — the hero, the section bands,
+   the card grid, the page headers — was grey, and `var(--border)` alone was used
+   68 times against the brand's 59. Read as a whole that is a black-and-white
+   site with a blue accent, not a blue product.
+
+   So this block gives the brand weight at the scale the neutrals had. The
+   restraint of the original design is kept: no neon, no glassmorphism, no
+   gradient-heavy panels. Surfaces, edges and states, so blue is what the page
+   is built from rather than what is sprinkled over it.
+   ========================================================================== */
+
+/* --- hero ---------------------------------------------------------------- */
+/* A wash rather than a filled panel. It reads as light behind the headline
+   instead of a decorative band, and it sits under the text rather than boxing
+   it in. `inset` deliberately overruns the hero horizontally so the wash fades
+   out past the viewport instead of ending at the content edge. */
+.hero { position: relative; isolation: isolate; }
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -56px -12vw 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 54% at 50% 20%, color-mix(in srgb, var(--brand-300) 40%, transparent) 0%, transparent 72%),
+    radial-gradient(44% 42% at 20% 6%, color-mix(in srgb, var(--brand-400) 24%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, var(--brand-wash) 0%, transparent 88%);
+}
+
+/* --- section bands ------------------------------------------------------- */
+/* Two bands, not every band. Washing all of them flattens the page into one
+   colour and loses the rhythm the alternating white/grey bands gave. */
+.tools-section,
+.workspace-section {
+  background: var(--brand-wash);
+  border-top-color: var(--brand-edge);
+}
+.cat-hero,
+.tool-head { border-bottom-color: var(--brand-edge); }
+
+/* --- card grid ----------------------------------------------------------- */
+/* A tinted edge rather than a grey one. On hover the card lifts and the shadow
+   is cast in brand rather than black, which is what makes it read as blue
+   interacting with the surface instead of blue sitting on grey. */
+.tool-card,
+.related-card,
+.guide-card,
+.workspace-card {
+  border-color: var(--brand-edge);
+  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+@media (hover: hover) {
+  .tool-card:hover,
+  .related-card:hover,
+  .guide-card:hover {
+    background: var(--surface);
+    border-color: var(--brand-edge-strong);
+    box-shadow: 0 12px 30px -14px var(--brand-ring);
+    transform: translateY(-2px);
+  }
+  .tool-card:hover .tool-icon { transform: scale(1.06); }
+}
+
+/* --- icon tiles ---------------------------------------------------------- */
+/* These were a pale tint with brand-coloured glyphs: correct, and nearly
+   invisible at 42px. Filled, they carry the colour at the size people actually
+   notice, and they tie the UI to the app icon. */
+.tool-icon,
+.upload-icon {
+  color: #fff;
+  background: linear-gradient(145deg, var(--brand-500) 0%, var(--brand-700) 100%);
+  box-shadow: 0 5px 14px -6px var(--brand-ring);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.tool-head-icon {
+  color: #fff;
+  background: linear-gradient(145deg, var(--brand-500) 0%, var(--brand-700) 100%);
+  box-shadow: 0 8px 22px -10px var(--brand-ring);
+}
+
+/* --- primary action ------------------------------------------------------ */
+/* Was hardcoded #1e3a8a, which meant it ignored the theme entirely and stayed
+   dark navy even where the brand had gone light. A short vertical gradient
+   reads as a considered control in both themes: brand-600 into brand-800 is a
+   legible blue on white, and the same pair on the dark surface still reads as
+   blue rather than as a black hole. */
+.button.primary {
+  background: linear-gradient(180deg, var(--brand-600) 0%, var(--brand-800) 100%);
+  border-color: var(--brand-800);
+  box-shadow: 0 8px 20px -10px var(--brand-ring);
+}
+@media (hover: hover) {
+  .button.primary:hover { background: linear-gradient(180deg, var(--brand-500) 0%, var(--brand-700) 100%); border-color: var(--brand-700); }
+}
+
+/* --- small blue details -------------------------------------------------- */
+.category-tabs button.selected {
+  color: var(--brand-700);
+  background: var(--brand-200);
+  border-color: var(--brand-300);
+}
+[data-theme="dark"] .category-tabs button.selected {
+  color: var(--brand-100);
+  background: var(--brand-800);
+  border-color: var(--brand-700);
+}
+
+.stat-chip {
+  border-color: var(--brand-edge);
+  background: var(--brand-wash);
+}
+
+.section-heading h2,
+.workspace-copy h2,
+.privacy-section h2 { color: var(--text); }
+
+/* A short blue rule above the section headings. It is the one place a heading
+   can carry colour without the heading itself becoming unreadable. */
+.section-kicker::after {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 2px;
+  margin-left: 10px;
+  vertical-align: middle;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--brand-500), color-mix(in srgb, var(--brand-300) 30%, transparent));
+}
+
+/* --- focus --------------------------------------------------------------- */
+/* The global outline already used the brand colour. It now carries a soft ring
+   as well, because a 2px hairline is easy to lose against the new blue edges
+   on cards and buttons. */
+:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand-400) 26%, transparent);
+}

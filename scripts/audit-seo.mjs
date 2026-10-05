@@ -153,14 +153,16 @@ async function main() {
 
   // --- broken internal links ---------------------------------------------
   const known = new Set(pages.map((page) => page.route.replace(/\/$/, '') || '/'));
-  for (const page of pages) {
-    const html = null; // already read above; re-read only for link scanning
-    void html;
-    void page;
-  }
   for (const target of linked) {
     if (target === '/') continue;
-    if (target.startsWith('/assets/') || target.startsWith('/sitemap')) continue;
+    // A static asset is a legitimate link target and is not a route, so ask
+    // the filesystem instead of maintaining an allowlist. An allowlist cannot
+    // tell a file that exists from one that has been renamed, so it accepts
+    // broken links and rejects good ones — which is how adding a favicon came
+    // to be reported as a broken internal link.
+    const relative = target.replace(/^\//, '');
+    if (existsSync(path.join(distDir, relative))) continue;
+    if (existsSync(path.join(distDir, relative, 'index.html'))) continue;
     if (!known.has(target)) {
       // Only report once; the source page is not essential to the finding.
       if (!problems.some((p) => p.message === `broken internal link -> ${target}`)) {
@@ -266,6 +268,38 @@ async function main() {
 
   console.log('Bundle wiring');
   console.log(`Pages with a live entry script  ${pages.length - brokenScripts.length}/${pages.length}`);
+
+  // --- third-party origins ------------------------------------------------
+  // The site claims files never leave the device, and it makes a stronger
+  // promise on the privacy page: no third-party origin is contacted at all.
+  // Both claims are trivially falsified by one stray <link> or <script>, which
+  // is exactly how it happened — the prerenderer's own HTML shell carried a
+  // pair of Google Fonts preconnects that the source index.html did not, so
+  // removing them from index.html changed nothing about the 84 built pages.
+  //
+  // W3C namespace URLs are excluded because they are identifiers rather than
+  // fetchable origins (they appear in SVG/XML namespaces and JSON-LD @context).
+  const THIRD_PARTY = /(?:href|src|content)="(https?:\/\/(?!(?:www\.)?w3\.org|schema\.org|purl\.org)[^"']+)"/g;
+  const offOrigin = new Map();
+  for (const page of pages) {
+    for (const match of page.html.matchAll(THIRD_PARTY)) {
+      let host = '';
+      try {
+        host = new URL(match[1]).hostname;
+      } catch {
+        host = match[1].slice(0, 60);
+      }
+      // Canonical and og:url point at this site's own origin.
+      if (host === new URL(ORIGIN).hostname) continue;
+      if (!offOrigin.has(host)) offOrigin.set(host, page.route);
+    }
+  }
+  for (const [host, route] of offOrigin) {
+    fail(route, `references a third-party origin (${host}); the privacy page promises there are none.`);
+  }
+
+  console.log('Third-party origins');
+  console.log(offOrigin.size === 0 ? 'None — every asset is served from this origin.' : `${offOrigin.size} found`);
 
   if (problems.length > 0) {
     console.log(`PROBLEMS (${problems.length})`);
