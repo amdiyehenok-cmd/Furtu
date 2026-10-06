@@ -92,6 +92,14 @@ describe('Content-Security-Policy allows the whole ad stack', () => {
     expect(directive(csp, 'frame-src')).toContain('fundingchoicesmessages.google.com');
   });
 
+  it('allows the ad network latency probe', () => {
+    // Discovered by running scripts/check-ads.mjs against production. The CSP
+    // only exists at the edge, so this cannot be found from a local dist, and
+    // it fails as a console violation on every page view rather than as a
+    // missing feature.
+    expect(directive(csp, 'connect-src')).toContain('adtrafficquality.google');
+  });
+
   it('keeps the loader host out of the way of nothing else', () => {
     expect(directive(csp, 'script-src')).toContain('pagead2.googlesyndication.com');
   });

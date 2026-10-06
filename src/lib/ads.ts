@@ -86,6 +86,12 @@ export const AD_ORIGINS = {
     'https://*.doubleclick.net',
     'https://fundingchoicesmessages.google.com',
     'https://*.fundingchoicesmessages.google.com',
+    // AdSense's latency probe. Found by running the harness against
+    // production, where the CSP actually applies — it cannot be discovered
+    // locally, because there is no CSP on a local dist. It is a measurement,
+    // not ad delivery, so blocking it costs no revenue, but it logs a CSP
+    // violation on every page view for every visitor.
+    'https://*.adtrafficquality.google',
   ],
 } as const;
 
