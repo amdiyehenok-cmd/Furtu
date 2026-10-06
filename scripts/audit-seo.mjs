@@ -270,36 +270,66 @@ async function main() {
   console.log(`Pages with a live entry script  ${pages.length - brokenScripts.length}/${pages.length}`);
 
   // --- third-party origins ------------------------------------------------
-  // The site claims files never leave the device, and it makes a stronger
-  // promise on the privacy page: no third-party origin is contacted at all.
-  // Both claims are trivially falsified by one stray <link> or <script>, which
-  // is exactly how it happened — the prerenderer's own HTML shell carried a
-  // pair of Google Fonts preconnects that the source index.html did not, so
-  // removing them from index.html changed nothing about the 84 built pages.
+  // The site makes exactly one third-party request, and it is deliberate:
+  // Google AdSense. The privacy page discloses it, and the CSP in vercel.json
+  // pins it to a named list.
   //
-  // W3C namespace URLs are excluded because they are identifiers rather than
-  // fetchable origins (they appear in SVG/XML namespaces and JSON-LD @context).
-  const THIRD_PARTY = /(?:href|src|content)="(https?:\/\/(?!(?:www\.)?w3\.org|schema\.org|purl\.org)[^"']+)"/g;
+  // This check existed before advertising did, and it still earns its place —
+  // it is what catches a stray analytics snippet, a CDN added without thought,
+  // or a font link reintroduced by habit. The allowlist is the point: it is
+  // narrower than "whatever AdSense happens to load today", so anything new
+  // still fails the build and has to be argued for.
+  const W3C = /^(?:www\.)?w3\.org$|^schema\.org$|^purl\.org$/;
+  const AD_ALLOW = [
+    /^pagead2\.googlesyndication\.com$/,
+    /^tpc\.googlesyndication\.com$/,
+    /^googleads\.g\.doubleclick\.net$/,
+    /^www\.google\.(?:com|co\.[a-z]{2})$/,
+  ];
+
+  // Only resources the page *fetches* count. A hyperlink to Google's ad-settings
+  // page is not a request to Google — it is a link a person chooses to click, and
+  // the privacy page is required to offer one. Matching bare `href=` reported
+  // those as an unexpected third party, which is wrong, and a false positive is
+  // how people learn to ignore a check.
+  const FETCHERS = [
+    /<(?:script|img|iframe|embed|object|source|track|audio|video)\b[^>]*?\bsrc="(https?:\/\/[^"]+)"/gi,
+    /<link\b[^>]*?\bhref="(https?:\/\/[^"]+)"/gi,
+    /<meta\b[^>]*?\bproperty="og:(?:image|video)[^"]*"[^>]*?\bcontent="(https?:\/\/[^"]+)"/gi,
+  ];
+
   const offOrigin = new Map();
   for (const page of pages) {
-    for (const match of page.html.matchAll(THIRD_PARTY)) {
-      let host = '';
-      try {
-        host = new URL(match[1]).hostname;
-      } catch {
-        host = match[1].slice(0, 60);
+    for (const pattern of FETCHERS) {
+      pattern.lastIndex = 0;
+      for (const match of page.html.matchAll(pattern)) {
+        let host = '';
+        try {
+          host = new URL(match[1]).hostname;
+        } catch {
+          host = match[1].slice(0, 60);
+        }
+        if (host === new URL(ORIGIN).hostname) continue;
+        if (W3C.test(host)) continue;
+        if (AD_ALLOW.some((re) => re.test(host))) continue;
+        if (!offOrigin.has(host)) offOrigin.set(host, page.route);
       }
-      // Canonical and og:url point at this site's own origin.
-      if (host === new URL(ORIGIN).hostname) continue;
-      if (!offOrigin.has(host)) offOrigin.set(host, page.route);
     }
   }
   for (const [host, route] of offOrigin) {
-    fail(route, `references a third-party origin (${host}); the privacy page promises there are none.`);
+    fail(route, `fetches a third-party resource from ${host}, which is neither AdSense nor exempt.`);
+  }
+
+  // An ad network with no ads.txt serves nothing and generates support mail.
+  if (!existsSync(path.join(distDir, 'ads.txt'))) {
+    warn('(build)', 'ads.txt is missing from dist/ — AdSense will not serve ads without it at the domain root.');
   }
 
   console.log('Third-party origins');
-  console.log(offOrigin.size === 0 ? 'None — every asset is served from this origin.' : `${offOrigin.size} found`);
+  const selfOrigin = new URL(ORIGIN).hostname;
+  console.log(offOrigin.size === 0
+    ? `Only AdSense (plus ${selfOrigin}). No unexpected third party.`
+    : `${offOrigin.size} unexpected found`);
 
   if (problems.length > 0) {
     console.log(`PROBLEMS (${problems.length})`);

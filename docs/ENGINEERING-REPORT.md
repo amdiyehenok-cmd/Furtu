@@ -22,12 +22,16 @@ Every claim below is reproducible from the repository:
 
 ```bash
 npm run typecheck    # 0 errors
-npm run test         # 69 passed / 69
+npm run test         # 84 passed / 84
 npm run build        # 84/84 routes, 76 sitemap URLs
 npm run audit:seo    # "No blocking problems found."
+npm run verify:browser  # 84/84 pages, 63/63 tools, 11/11 consent checks
 node scripts/report-bundle.mjs       # payload measurements
 node scripts/analyse-entry.mjs       # per-module entry weights
 ```
+
+The browser harnesses need a built site being served: `npm run build`, then
+`npm run preview` in another terminal, then `npm run verify:browser`.
 
 ---
 
@@ -362,8 +366,20 @@ Playwright harnesses run against `scripts/serve-dist.mjs`.
 | --- | --- | --- |
 | `browser-audit.mjs` | 84/84 | Every route hydrates, no console errors, every asset resolves |
 | `test-all-tools.mjs` | 63/63 | Every tool produces a real result through the real UI |
+| `check-consent.mjs` | 11/11 | The consent gate is real: no ad request before consent, and the ad network reachable only after it |
 | `diff-hydration.mjs` | identical | Server markup matches post-hydration DOM on `/`, `/tools`, a tool page, `/privacy`, `/guides` |
 | `audit-seo.mjs` | 84/84 wired | Every page carries a live entry script |
+
+Run the three browser harnesses together with `npm run verify:browser`, against
+a built site served by `npm run preview`.
+
+The consent check earns its place more than the others. "The banner renders"
+and "the banner works" are different claims, and only the second one matters: a
+banner that shows but gates nothing is worse than none at all, because it tells
+the visitor their choice was respected while the ad network has already been
+called. It asserts zero ad-network requests before consent, that the answer
+survives a reload, that it is stored in `localStorage` rather than a cookie, and
+that the network is reached only on acceptance. It found §13.2.
 
 The tool sweep is the one that matters. It presses the sample button, runs the
 tool, and asserts a result element appears — driving the same code path a visitor
@@ -449,6 +465,32 @@ This is the single largest deployment trap in the project and is documented in
 to work locally, passes every content check, and 404s or serves the homepage for
 deep links depending on the host.
 
+### 13.2 The consent banner that shipped to nobody
+
+The advertising consent banner was written into `src/components/AppShell.tsx`
+and was completely absent from the website. It type-checked, it rendered
+correctly in the prerendered HTML, the source file contained every string, and
+every check that did not involve a browser passed.
+
+The cause is structural and worth knowing about. **There are two shells.**
+`AppShell.tsx` is used *only* by `src/entry-server.tsx`, the prerenderer.
+`src/App.tsx` is the client entry and renders the chrome itself. They are near
+copies of one another, and nothing enforces that they stay in step.
+
+So a component added to the server shell reached the crawler and not the
+visitor. `App.tsx` now carries the same `ConsentProvider` and `ConsentBanner`.
+
+This is worth flagging rather than quietly fixing, because the deeper issue is
+that two shells can drift for *any* future change, and a mismatch between them
+is a hydration error on every page. Two options, neither taken here because it
+is a larger change than the bug warranted:
+
+- make `App.tsx` render `AppShell` and delete the duplicate markup, or
+- have the SEO audit diff the server-rendered shell against the client one.
+
+The consent check below is what caught it in the end, and it is the reason the
+check exists rather than a comment.
+
 ## 14. Privacy claims are technically true
 
 The "Processed locally" badge on every tool page is **derived from
@@ -489,8 +531,41 @@ Removing it surfaced two things worth recording:
    and throws otherwise.
 
 Both are now checked rather than fixed: `audit:seo` fails the build if any page
-references a third-party origin, and prints `None — every asset is served from
-this origin` when it passes.
+references an unexpected third-party origin, and prints
+`Only AdSense (plus furtu.xyz). No unexpected third party.` when it passes.
+
+The allowlist is the point. An audit that only ever printed "clean" would have
+been useless the moment advertising was switched on — it would either have
+blocked the build or, worse, been quietly edited into a no-op. It now names the
+AdSense origins specifically and warns if `public/ads.txt` is missing.
+
+### 14.1a Advertising, and what it costs the local-first claim
+
+Monetising with AdSense directly contradicts the product's central claim, so it
+is recorded here rather than left implicit.
+
+What is preserved: **no file ever touches the ad network.** The engines, the
+workspace and the file pipeline do not read or write to the ad markup, so "your
+document never leaves this tab" remains literally true. **No ad is ever placed
+inside a tool** — a visitor mid-task with a file open is not shown an advert.
+Every placement is below the fold, collapses to nothing before it fills, and
+reserves its height in CSS so filling it causes no layout shift.
+
+What is given up: the site is no longer third-party-free. It is disclosed on the
+privacy page, behind consent, and the consent defaults to **declined** — it is
+recorded only when someone actively accepts, because inferring consent from
+having no banner is the pattern that produces an enforcement action.
+
+The AdSense `<script>` is deliberately **not** in `<head>` despite Google's own
+snippet, because fetching that script *is* the request to the ad network; putting
+it in the prerendered HTML would contact every visitor before asking, including
+anyone arriving on a deep link who never sees the banner. It is injected on
+consent instead. Verification uses the inert
+`<meta name="google-adsense-account">` tag, which contacts nothing.
+
+Turning advertising off is a single edit: set `CLIENT` to `''` in
+`src/lib/ads.ts`. The script is never injected, the slots render nothing, and the
+layout is identical to the ad-free build.
 
 ### 14.2 Self-hosting, and what it actually cost
 
@@ -632,12 +707,15 @@ canonical origin is `https://furtu.xyz`.
 ```
 src/lib/tools/         5 definition files (63 tools) + types + registry + formats
 src/lib/engines/       loader + 6 operation modules
-src/lib/               router, seo, search, guides, paginate, validate, format, site
-src/components/        shell, chrome, command palette, workspace/*
+src/lib/               router, seo, search, guides, paginate, validate, format, site,
+                       ads, ads-consent
+src/components/        shell, chrome, command palette, ad slot, consent banner,
+                       workspace/*
 src/pages/             14 page components
 scripts/               prerender, audit-seo, serve-dist, browser-audit,
-                       test-all-tools, diff-hydration, shoot, report-bundle,
-                       analyse-entry, debug-hydration, make-fixture-pdf
+                       test-all-tools, check-consent, diff-hydration, shoot,
+                       report-bundle, analyse-entry, debug-hydration,
+                       make-fixture-pdf, fetch-fonts, make-og-image
 tests/                 4 suites, 84 tests
 docs/                  this report, ARCHITECTURE.md, ADDING-A-TOOL.md, DEPLOYMENT.md
 ```
@@ -647,9 +725,13 @@ Verification:
 | Command | Runs |
 | --- | --- |
 | `npm run verify` | typecheck → tests → build → SEO audit |
-| `npm run verify:browser` | build → serve → 84-page audit → 63-tool sweep |
+| `npm run verify:browser` | 84-page audit → 63-tool sweep → 11 consent checks |
 | `npm run audit:browser` | hydration + console + asset audit alone |
 | `npm run test:tools` | 63-tool sweep alone |
+| `npm run test:consent` | 11-check consent gate audit alone |
+
+`npm run verify:browser` needs a built site already being served
+(`npm run build`, then `npm run preview` in another terminal).
 
 `npm run preview` deliberately runs `scripts/serve-dist.mjs`, **not** `vite
 preview`. See §13.1 and `docs/DEPLOYMENT.md` for why that difference is a

@@ -1222,3 +1222,106 @@ html { scroll-padding-top: 88px; }
   outline-offset: 3px;
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand-400) 26%, transparent);
 }
+
+/* ==========================================================================
+   Advertising
+
+   Deliberately restrained, because the revenue is small and the promise the
+   site is built on is large. No ad is ever placed inside a tool workspace, no
+   slot sits above the fold, and every slot reserves its height before the
+   creative loads so that adding a third-party script does not shift the layout
+   under a visitor who is mid-task.
+   ========================================================================== */
+
+.ad-slot {
+  /* The reserved height is the whole point. AdSense inserts its creative
+     asynchronously; without space held open, the content below jumps down when
+     it arrives, which is a Core Web Vitals regression and the most likely way
+     that monetising this site would cost it rankings. */
+  min-height: 280px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  /* Hidden until the network settles, then revealed — so an unfilled slot
+     disappears instead of leaving a grey box where nothing ever arrives. */
+  opacity: 0;
+  transition: opacity 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+.ad-slot:has(ins[data-ad-status="filled"]) {
+  opacity: 1;
+}
+
+/* Collapse to nothing once it is clear no ad is coming. Applied by the
+   fallback timer rather than by a failed request, so a slow-but-successful
+   load is not thrown away. */
+.ad-slot.is-empty {
+  min-height: 0;
+  padding: 0;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .ad-slot { min-height: 250px; padding: 0 16px; }
+}
+
+/* Never on a narrow screen where it would dominate the tool. */
+@media (max-width: 420px) {
+  .ad-slot { min-height: 200px; }
+}
+
+/* --- consent banner ------------------------------------------------------ */
+/* Sits at the bottom, never covers content, and never blocks a tool. A visitor
+   mid-task must be able to keep working while it is on screen. */
+.consent {
+  position: fixed;
+  z-index: 60;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--brand-edge-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  animation: consent-rise 260ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.consent-text { flex: 1 1 320px; }
+.consent-title {
+  margin: 0 0 3px;
+  font-family: var(--font-technical);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-700);
+}
+[data-theme="dark"] .consent-title { color: var(--brand-300); }
+.consent-text p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.55; }
+.consent-text a { color: var(--brand-700); text-decoration: underline; text-underline-offset: 2px; }
+[data-theme="dark"] .consent-text a { color: var(--brand-300); }
+.consent-actions { display: flex; gap: 8px; flex: none; }
+
+@keyframes consent-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consent { animation: none; }
+}
+
+@media (max-width: 560px) {
+  .consent { left: 10px; right: 10px; bottom: 10px; padding: 14px; }
+  .consent-actions { width: 100%; }
+  .consent-actions .button { flex: 1; }
+}

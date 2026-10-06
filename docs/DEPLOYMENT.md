@@ -133,7 +133,8 @@ FURTU_BASE=https://staging.example node scripts/browser-audit.mjs
 - [ ] `/favicon.svg`, `/apple-touch-icon.png`, `/og-image.png` and
       `/site.webmanifest` all return 200 (the audit now catches a missing icon
       as a broken internal link)
-- [ ] `node scripts/browser-audit.mjs <your-url>` reports no third-party origins
+- [ ] `node scripts/browser-audit.mjs <your-url>` reports no console errors and
+      every page hydrating
 
 ## The web fonts are self-hosted
 
@@ -167,8 +168,30 @@ npm run assets:fonts
    shipped with two typefaces silently falling back to the system stack. No test
    failed. The script now asserts every expected family came back and throws.
 
-The SEO audit now also fails the build if any page references a third-party
-origin, so neither can regress silently.
+The SEO audit now also fails the build if any page references an origin that is
+not on its allowlist, so neither can regress silently.
+
+## Advertising
+
+The site is monetised with Google AdSense, publisher ID `ca-pub-5358754327162242`.
+
+**`public/ads.txt` must be served at the domain root.** It is
+`google.com, pub-5358754327162242, DIRECT, f08c47fec0942fa0` and the audit warns
+if it is missing, because AdSense will not serve without it.
+
+Two things about the implementation are deliberate and should not be "corrected":
+
+1. **The AdSense script is not in `<head>`,** despite Google's snippet saying it
+   should be. Fetching that script *is* the request to the ad network, so
+   putting it in the prerendered HTML contacts every visitor before being asked —
+   including anyone who lands on a deep link and never sees the banner. It is
+   injected on consent instead. Verification with Google uses the inert
+   `<meta name="google-adsense-account">` tag, which contacts nothing.
+2. **The CSP in `vercel.json` names the AdSense origins.** If you tighten it, ads
+   will silently fail to render rather than error.
+
+To switch advertising off, set `CLIENT = ''` in `src/lib/ads.ts`. Nothing is
+injected, the slots render nothing, and the layout matches the ad-free build.
 
 ## Vercel
 

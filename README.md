@@ -25,9 +25,11 @@ npm run verify     # typecheck + tests + build + SEO audit
   structured data are in the HTML a crawler receives.
 - **130 KB brotli first load**, with 1.17 MB of PDF, image, ZIP, YAML and QR
   codecs behind dynamic imports that only load if you open a matching tool.
-- **No third-party origin, at all.** Fonts are self-hosted, there is no
-  analytics, no tag manager and no CDN. The SEO audit fails the build if a
-  single page references an external origin, so the claim cannot quietly rot.
+- **No third-party origin until you say so.** Fonts are self-hosted, there is no
+  analytics, no tag manager and no CDN. Advertising is the single exception, and
+  nothing is requested from it until a visitor accepts the consent banner — the
+  default is declined. The SEO audit fails the build if a page references an
+  origin that is not on the allowlist, so the claim cannot quietly rot.
 
 ## Licence
 

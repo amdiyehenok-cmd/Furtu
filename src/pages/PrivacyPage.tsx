@@ -87,29 +87,59 @@ export default function PrivacyPage() {
       <section aria-labelledby="cookies">
         <h2 id="cookies">Cookies</h2>
         <p>
-          Furtu sets no tracking cookies. Your theme preference is stored in your browser's local storage,
-          which never leaves your device and can be cleared from your browser settings at any time.
+          Furtu itself sets no cookies and runs no analytics. Your theme preference is stored in
+          your browser&rsquo;s local storage, which never leaves your device and can be cleared from
+          your browser settings at any time.
         </p>
         <p>
-          If anonymous, aggregate traffic measurement is enabled in future, it will be a cookieless,
-          IP-truncating measurement and this page will be updated to say so before it ships.
+          The one exception is advertising, and only if you consent to it. If you agree, Google&rsquo;s
+          ad network sets its own cookies &mdash; it does that itself, not Furtu, and Furtu has no
+          access to what they contain or to who is shown what. Declining means none of that happens
+          and no ad is requested.
+        </p>
+        <p>
+          Your consent answer is kept in local storage, not a cookie, so recording it sends nothing
+          anywhere. Clearing your browser storage removes it and you will be asked once more.
         </p>
       </section>
 
       <section aria-labelledby="third-parties">
-        <h2 id="third-parties">Third parties</h2>
+        <h2 id="third-parties">Third parties and advertising</h2>
         <p>
-          Furtu makes no requests to any third-party origin. There is no analytics script, no tag
-          manager, no advertising pixel and no CDN in front of the site. Every asset — scripts,
-          stylesheets, fonts and images — is served from this origin, so no other company sees your
-          IP address, your browser details or your visit.
+          This site is funded by advertising. It uses Google AdSense, which means Google&rsquo;s ad
+          network can set cookies and similar storage on your device, read them back, and use them to
+          build a profile of you across this site and other sites that run the same network. That is
+          the ordinary business model of web advertising and it is worth being plain about it.
         </p>
         <p>
-          This used to be false. The site loaded its web fonts from Google Fonts, which meant every
-          page view handed your IP address to Google before anything else happened, and this page
-          had to disclose it. The fonts are now served from this origin instead, so the asterisk is
-          gone. Inter, IBM Plex Mono and Source Serif 4 are all licensed under the SIL Open Font
-          License, which permits exactly that.
+          <strong>Your files are not part of any of it.</strong> An advert is page markup that loads
+          while the page renders. The tools, the engines and the file pipeline never read it and never
+          write to it. If you merge a PDF, the document never reaches Google or anywhere else &mdash;
+          and no advert is ever shown inside a tool, only after the content on the page.
+        </p>
+        <p>
+          Nothing is set until you agree. You are asked once, your answer is kept in this
+          browser&rsquo;s local storage rather than in a cookie, and saying &ldquo;no thanks&rdquo;
+          means no advertising cookies and no ad requests at all. Your tool pages keep working
+          exactly as before.
+        </p>
+        <p>
+          Google&rsquo;s use of advertising cookies enables it and its partners to serve ads based on
+          your visits to this and other sites. You can opt out of personalised advertising at{' '}
+          <a href="https://adssettings.google.com" rel="nofollow noreferrer noopener" target="_blank">
+            Google Ads Settings
+          </a>
+          , or opt out of third-party vendor cookies at{' '}
+          <a href="https://optout.aboutads.info" rel="nofollow noreferrer noopener" target="_blank">
+            aboutads.info
+          </a>
+          .
+        </p>
+        <p>
+          Beyond advertising, there are no other third parties. There is no analytics script, no tag
+          manager and no CDN. Fonts, scripts, styles and images are all served from this origin. This
+          site used to load its fonts from Google Fonts, which meant every page view handed your IP
+          address to Google before anything else happened; that has since been removed.
         </p>
         <p>
           No file or pasted text is shared with any third party, because none of it ever leaves your

@@ -2,6 +2,8 @@ import { Suspense, type ReactNode } from 'react';
 
 import { CommandPalette } from './CommandPalette';
 import { SiteFooter, SiteHeader } from './SiteChrome';
+import { ConsentBanner } from './ConsentBanner';
+import { ConsentProvider } from '@/lib/ads-consent';
 import type { Route } from '@/lib/router';
 
 function RouteFallback() {
@@ -36,20 +38,23 @@ export function AppShell({
   onCloseSearch?: () => void;
 }) {
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <SiteHeader onOpenSearch={onOpenSearch ?? (() => {})} />
+    <ConsentProvider>
+      <div className="app-shell">
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <SiteHeader onOpenSearch={onOpenSearch ?? (() => {})} />
 
-      <main id="main" tabIndex={-1}>
-        <Suspense fallback={<RouteFallback />}>{children}</Suspense>
-      </main>
+        <main id="main" tabIndex={-1}>
+          <Suspense fallback={<RouteFallback />}>{children}</Suspense>
+        </main>
 
       <SiteFooter />
-      {searchOpen !== undefined && onCloseSearch && (
+        {searchOpen !== undefined && onCloseSearch && (
         <CommandPalette open={searchOpen} onClose={onCloseSearch} />
-      )}
-    </div>
+        )}
+        <ConsentBanner />
+      </div>
+    </ConsentProvider>
   );
 }

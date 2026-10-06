@@ -16,6 +16,7 @@
 import { SITE, absoluteUrl } from './site';
 import { CATEGORY_BY_ID, toolPath } from './tools/registry';
 import type { ToolDefinition } from './tools/types';
+import { CLIENT as AD_CLIENT, adsEnabled } from './ads';
 
 export interface PageMeta {
   title: string;
@@ -235,7 +236,13 @@ function escapeHtml(value: string): string {
 
 export interface HeadTag {
   tag: 'title' | 'meta' | 'link' | 'script';
-  attrs?: Record<string, string>;
+  /**
+   * Attribute values. `boolean` renders as a bare attribute (`async`, not
+   * `async="true"`) because HTML boolean attributes are presence-only —
+   * `async="false"` still loads async, which is the kind of detail that is
+   * silently wrong rather than loudly broken.
+   */
+  attrs?: Record<string, string | number | boolean>;
   content?: string;
 }
 
@@ -274,6 +281,22 @@ export function headTags(meta: PageMeta, cssHref?: string): HeadTag[] {
 
   if (cssHref) tags.push({ tag: 'link', attrs: { rel: 'stylesheet', href: cssHref } });
 
+  // AdSense site verification.
+  //
+  // Google asks for `adsbygoogle.js` in <head>, and accepts that as proof of
+  // ownership. It also accepts this meta tag, which is the better choice here:
+  // it is inert. It declares the publisher ID to Google and loads nothing,
+  // contacts nobody and sets no cookie — so verifying the site does not
+  // require contacting every visitor who has not consented.
+  //
+  // The loader itself is injected by ConsentProvider once consent is given.
+  if (adsEnabled()) {
+    tags.push({
+      tag: 'meta',
+      attrs: { name: 'google-adsense-account', content: 'ca-pub-' + AD_CLIENT.replace(/^ca-pub-/, '') },
+    });
+  }
+
   for (const node of meta.jsonLd) {
     tags.push({
       tag: 'script',
@@ -298,10 +321,17 @@ export function renderTags(tags: HeadTag[]): string {
     .join('\n    ');
 }
 
-function attrString(attrs?: Record<string, string>): string {
+function attrString(attrs?: Record<string, string | number | boolean>): string {
   if (!attrs) return '';
   return Object.entries(attrs)
-    .map(([key, value]) => ` ${key}="${escapeHtml(value)}"`)
+    .map(([key, value]) => {
+      // A boolean attribute is rendered by its presence alone. `async="false"`
+      // would still make the script async, so the value must be dropped rather
+      // than stringified.
+      if (value === true) return ` ${key}`;
+      if (value === false) return '';
+      return ` ${key}="${escapeHtml(String(value))}"`;
+    })
     .join('');
 }
 

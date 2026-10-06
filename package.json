@@ -22,12 +22,13 @@
     "serve": "node scripts/serve-dist.mjs",
     "audit:browser": "node scripts/browser-audit.mjs",
     "test:tools": "node scripts/test-all-tools.mjs",
+    "test:consent": "node scripts/check-consent.mjs",
     "report:bundle": "node scripts/report-bundle.mjs",
     "assets:fonts": "node scripts/fetch-fonts.mjs",
     "assets:og": "node scripts/make-og-image.mjs",
     "assets": "npm run assets:fonts && npm run build && npm run assets:og",
     "verify": "npm run typecheck && npm run test && npm run build && npm run audit:seo",
-    "verify:browser": "node scripts/browser-audit.mjs && node scripts/test-all-tools.mjs",
+    "verify:browser": "node scripts/browser-audit.mjs && node scripts/test-all-tools.mjs && node scripts/check-consent.mjs",
     "format": "oxfmt src scripts tests"
   },
   "dependencies": {
