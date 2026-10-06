@@ -19,23 +19,27 @@ import { ADS, CLIENT, adsEnabled, type AdPlacement } from '@/lib/ads';
  *    container removes itself from the flow so the layout is identical to the
  *    ad-free build rather than a reserved hole with nothing in it.
  *
- * 3. **`push()` is called once, guarded, and only after consent.** The global
+ * 3. **`push()` is called once, guarded, and early.** The global
  *    `adsbygoogle` object is created by the async head script and may not exist
  *    yet when this mounts, so a blind call throws. The guard also makes a
  *    double-render safe.
+ *
+ * Note what this component does *not* do: it does not gate on consent. That
+ * decision belongs to Google's certified CMP, which is a network-level gate in
+ * front of the loader rather than something a component can enforce. Firing the
+ * request unconditionally is correct — refusing to ask for the request is not
+ * a way to avoid it.
  */
 
 interface AdSlotProps {
   placement: AdPlacement;
-  /** Set false before consent has been given, to withhold the ad. */
-  allowed: boolean;
 }
 
-export function AdSlot({ placement, allowed }: AdSlotProps) {
+export function AdSlot({ placement }: AdSlotProps) {
   const holder = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!adsEnabled() || !allowed) return;
+    if (!adsEnabled()) return;
 
     let cancelled = false;
 
@@ -65,7 +69,7 @@ export function AdSlot({ placement, allowed }: AdSlotProps) {
       window.clearInterval(timer);
       window.clearTimeout(giveUp);
     };
-  }, [allowed, placement.id]);
+  }, [placement.id]);
 
   if (!adsEnabled()) return null;
 

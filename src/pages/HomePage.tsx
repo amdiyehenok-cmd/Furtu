@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 
 import { Icon } from '@/components/Icon';
 import { AdSlot, ADS } from '@/components/AdSlot';
-import { useAdsConsent } from '@/lib/ads-consent';
 import {
   CATEGORIES,
   categoryPath,
@@ -23,7 +22,6 @@ type CategoryFilter = 'all' | (typeof CATEGORIES)[number]['segment'];
  * read from the registry, so the page can never disagree with the catalogue.
  */
 export default function HomePage() {
-  const { granted } = useAdsConsent();
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [query, setQuery] = useState('');
 
@@ -359,7 +357,7 @@ export default function HomePage() {
 
       {/* Below the fold and outside every tool. The one rule that keeps
           monetisation from costing the product more than it earns. */}
-      <AdSlot placement={ADS.home} allowed={granted} />
+      <AdSlot placement={ADS.home} />
     </div>
   );
 }

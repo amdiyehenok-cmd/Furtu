@@ -22,10 +22,10 @@ Every claim below is reproducible from the repository:
 
 ```bash
 npm run typecheck    # 0 errors
-npm run test         # 84 passed / 84
+npm run test         # 98 passed / 98
 npm run build        # 84/84 routes, 76 sitemap URLs
 npm run audit:seo    # "No blocking problems found."
-npm run verify:browser  # 84/84 pages, 63/63 tools, 11/11 consent checks
+npm run verify:browser  # 84/84 pages, 63/63 tools, 12/12 advertising checks
 node scripts/report-bundle.mjs       # payload measurements
 node scripts/analyse-entry.mjs       # per-module entry weights
 ```
@@ -366,20 +366,27 @@ Playwright harnesses run against `scripts/serve-dist.mjs`.
 | --- | --- | --- |
 | `browser-audit.mjs` | 84/84 | Every route hydrates, no console errors, every asset resolves |
 | `test-all-tools.mjs` | 63/63 | Every tool produces a real result through the real UI |
-| `check-consent.mjs` | 11/11 | The consent gate is real: no ad request before consent, and the ad network reachable only after it |
+| `check-ads.mjs` | 12/12 | The ad integration works: loader executes, a slot is registered and an ad request is issued, `ads.txt` served, no advert inside a tool |
+| `tests/ads.test.ts` | 14 tests | CSP allows every ad origin, `ads.txt` is byte-exact and BOM-free, the local consent gate is gone |
 | `diff-hydration.mjs` | identical | Server markup matches post-hydration DOM on `/`, `/tools`, a tool page, `/privacy`, `/guides` |
 | `audit-seo.mjs` | 84/84 wired | Every page carries a live entry script |
 
 Run the three browser harnesses together with `npm run verify:browser`, against
 a built site served by `npm run preview`.
 
-The consent check earns its place more than the others. "The banner renders"
-and "the banner works" are different claims, and only the second one matters: a
-banner that shows but gates nothing is worse than none at all, because it tells
-the visitor their choice was respected while the ad network has already been
-called. It asserts zero ad-network requests before consent, that the answer
-survives a reload, that it is stored in `localStorage` rather than a cookie, and
-that the network is reached only on acceptance. It found §13.2.
+The tool sweep is the one that matters. It presses the sample button, runs the
+tool, and asserts a result element appears — driving the same code path a visitor
+does, through the real DOM, with the real engine chunk loaded lazily. It found
+the two sample-selection bugs in §12.1, which no unit test could have caught,
+because the failure was "correct error message" rather than a thrown exception.
+
+`check-ads.mjs` earns its place for a specific reason: it counts `aside.ad-slot`
+rather than `ins.adsbygoogle`, because Google's loader injects its own
+`adsbygoogle-noablate` sentinel at the document root, and counting the ins
+elements double-counts every page. It also asserts on a real ad request rather
+than on `window.adsbygoogle`, which the current loader consumes rather than
+leaving as an array — the first version of this harness asserted both and
+reported two false failures against a working integration.
 
 The tool sweep is the one that matters. It presses the sample button, runs the
 tool, and asserts a result element appears — driving the same code path a visitor
@@ -465,31 +472,42 @@ This is the single largest deployment trap in the project and is documented in
 to work locally, passes every content check, and 404s or serves the homepage for
 deep links depending on the host.
 
-### 13.2 The consent banner that shipped to nobody
+### 13.2 There are two shells, and only one of them reaches the visitor
 
-The advertising consent banner was written into `src/components/AppShell.tsx`
-and was completely absent from the website. It type-checked, it rendered
-correctly in the prerendered HTML, the source file contained every string, and
-every check that did not involve a browser passed.
+**`AppShell.tsx` is used only by the prerenderer.** `src/entry-server.tsx`
+imports it; `src/App.tsx`, the client entry, does not. `App.tsx` renders the
+page chrome itself. They are near-copies of one another and nothing enforces
+that they stay in step.
 
-The cause is structural and worth knowing about. **There are two shells.**
-`AppShell.tsx` is used *only* by `src/entry-server.tsx`, the prerenderer.
-`src/App.tsx` is the client entry and renders the chrome itself. They are near
-copies of one another, and nothing enforces that they stay in step.
+This was found by adding the advertising consent banner to `AppShell.tsx` and
+watching it not appear. The banner type-checked, rendered correctly in the
+prerendered HTML, had every string present in its source file, and passed every
+check that did not involve a browser — while being completely absent from the
+website, because it had been added to the half of the app that only ever reaches
+the crawler.
 
-So a component added to the server shell reached the crawler and not the
-visitor. `App.tsx` now carries the same `ConsentProvider` and `ConsentBanner`.
+Two things follow from that, and both are worth more than the original bug.
 
-This is worth flagging rather than quietly fixing, because the deeper issue is
-that two shells can drift for *any* future change, and a mismatch between them
-is a hydration error on every page. Two options, neither taken here because it
-is a larger change than the bug warranted:
+**The React hydration mismatch on all 84 pages was the same defect,** not an
+independent one. Once the two shells disagreed about what to render, every page
+logged React error #418. Fixing the split removed the mismatch everywhere.
+
+**The bundler has a matching trap in the same area.** A module read by both the
+entry and a lazily loaded page is hoisted into a shared chunk. If that module
+needs the JSX runtime, it takes the runtime back out of the entry chunk, forming
+a cycle — and Rolldown resolved it by silently dropping the entry's import of
+the shared chunk, so the provider and the banner were tree-shaken away with no
+error. `src/lib/ads-consent.ts` was written JSX-free (`createElement` instead of
+JSX) specifically to break that cycle, and the reason is recorded at the top of
+the file so nobody "tidies" it back.
+
+The deeper issue is that two shells can drift for *any* future change. Two
+options, neither taken because both are larger than the bug warranted:
 
 - make `App.tsx` render `AppShell` and delete the duplicate markup, or
 - have the SEO audit diff the server-rendered shell against the client one.
 
-The consent check below is what caught it in the end, and it is the reason the
-check exists rather than a comment.
+The browser harnesses are what caught it, which is the argument for them.
 
 ## 14. Privacy claims are technically true
 
@@ -549,22 +567,61 @@ workspace and the file pipeline do not read or write to the ad markup, so "your
 document never leaves this tab" remains literally true. **No ad is ever placed
 inside a tool** — a visitor mid-task with a file open is not shown an advert.
 Every placement is below the fold, collapses to nothing before it fills, and
-reserves its height in CSS so filling it causes no layout shift.
+reserves its height in CSS (280px on the homepage, asserted by a test) so
+filling it causes no layout shift.
 
-What is given up: the site is no longer third-party-free. It is disclosed on the
-privacy page, behind consent, and the consent defaults to **declined** — it is
-recorded only when someone actively accepts, because inferring consent from
-having no banner is the pattern that produces an enforcement action.
+What is given up: the site is not third-party-free. It is disclosed on the
+privacy page, and it is the only third party.
 
-The AdSense `<script>` is deliberately **not** in `<head>` despite Google's own
-snippet, because fetching that script *is* the request to the ad network; putting
-it in the prerendered HTML would contact every visitor before asking, including
-anyone arriving on a deep link who never sees the banner. It is injected on
-consent instead. Verification uses the inert
-`<meta name="google-adsense-account">` tag, which contacts nothing.
+### 14.1b The consent gate was built twice, and the first one was wrong
+
+The first implementation was a hand-rolled banner with the answer kept in
+`localStorage` under `furtu.ads-consent`, defaulting to declined, with the
+AdSense loader withheld from the HTML and injected on acceptance. On its own
+terms it was strict: the browser harness proved zero ad-network requests before
+consent, eleven checks in all.
+
+**It was still the wrong answer, and only because Google changed the question.**
+Google requires publishers serving *personalised* ads in the EEA, UK and
+Switzerland to use a CMP certified by Google and integrated with the IAB TCF.
+Traffic from a non-certified CMP is eligible only for non-personalised or limited
+ads. So the local gate would have cost exactly the revenue it was built to
+protect, while looking impeccable from the outside — and running *both* would
+have meant two banners on screen and still downgraded traffic, because a local
+banner emits no TCF string.
+
+The replacement is Google's own free "European regulations" message, already
+certified, no cost, and covering every site in the AdSense account. It collects
+the consent, writes the TCF string, and gates the ad request at the network
+level where Google expects the gate to be. The local banner, its consent module
+and its styles are gone.
+
+Three consequences worth recording:
+
+- **The loader moved back into `<head>`.** Withholding it was correct for a
+  hand-rolled gate and wrong for a certified one. The reasoning did not survive
+  the change of architecture, which is a good reason to write down *why* code
+  does something and not only *what* it does.
+- **The CSP had to grow.** Funding Choices loads from
+  `fundingchoicesmessages.google.com`, which was not allowlisted. Missing it
+  makes the consent message fail to render silently — no console error, no
+  failed request, the request is simply never made — and the symptom is
+  permanently lost personalised revenue with nothing to debug.
+- **The check protecting it is now a build-time test,** `tests/ads.test.ts`,
+  which asserts every origin in `src/lib/ads.ts` appears in the `vercel.json`
+  CSP, and that `ads.txt` is byte-exact and BOM-free. A silent failure is
+  exactly the failure mode that needs a check rather than a comment.
+
+What the harness can no longer prove is the part that mattered most: that
+consent actually gates delivery. Google's CMP only renders for EEA, UK and Swiss
+visitors and is Google's own component, so that claim can only be verified from
+inside those regions. `scripts/check-ads.mjs` verifies everything around it — the
+loader executes, a slot is registered and an ad request is issued, `ads.txt` is
+served, no advert appears inside a tool, and no local banner remains to compete
+with Google's.
 
 Turning advertising off is a single edit: set `CLIENT` to `''` in
-`src/lib/ads.ts`. The script is never injected, the slots render nothing, and the
+`src/lib/ads.ts`. The script is never emitted, the slots render nothing, and the
 layout is identical to the ad-free build.
 
 ### 14.2 Self-hosting, and what it actually cost
@@ -708,15 +765,15 @@ canonical origin is `https://furtu.xyz`.
 src/lib/tools/         5 definition files (63 tools) + types + registry + formats
 src/lib/engines/       loader + 6 operation modules
 src/lib/               router, seo, search, guides, paginate, validate, format, site,
-                       ads, ads-consent
-src/components/        shell, chrome, command palette, ad slot, consent banner,
+                       ads
+src/components/        shell, chrome, command palette, ad slot,
                        workspace/*
 src/pages/             14 page components
 scripts/               prerender, audit-seo, serve-dist, browser-audit,
-                       test-all-tools, check-consent, diff-hydration, shoot,
+                       test-all-tools, check-ads, diff-hydration, shoot,
                        report-bundle, analyse-entry, debug-hydration,
                        make-fixture-pdf, fetch-fonts, make-og-image
-tests/                 4 suites, 84 tests
+tests/                 5 suites, 98 tests
 docs/                  this report, ARCHITECTURE.md, ADDING-A-TOOL.md, DEPLOYMENT.md
 ```
 
@@ -725,10 +782,10 @@ Verification:
 | Command | Runs |
 | --- | --- |
 | `npm run verify` | typecheck → tests → build → SEO audit |
-| `npm run verify:browser` | 84-page audit → 63-tool sweep → 11 consent checks |
+| `npm run verify:browser` | 84-page audit → 63-tool sweep → 12 advertising checks |
 | `npm run audit:browser` | hydration + console + asset audit alone |
 | `npm run test:tools` | 63-tool sweep alone |
-| `npm run test:consent` | 11-check consent gate audit alone |
+| `npm run test:ads` | 12-check advertising audit alone |
 
 `npm run verify:browser` needs a built site already being served
 (`npm run build`, then `npm run preview` in another terminal).

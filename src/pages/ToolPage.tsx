@@ -1,6 +1,5 @@
 import { Icon } from '@/components/Icon';
 import { AdSlot, ADS } from '@/components/AdSlot';
-import { useAdsConsent } from '@/lib/ads-consent';
 import { ToolWorkspace } from '@/components/workspace/ToolWorkspace';
 import { formatBytes } from '@/lib/format';
 import {
@@ -23,7 +22,6 @@ import { SITE } from '@/lib/site';
  * anything.
  */
 export default function ToolPage({ tool }: { tool: ToolDefinition }) {
-  const { granted } = useAdsConsent();
   const category = CATEGORY_BY_ID.get(tool.category);
   const siblings = siblingTools(tool, 8);
   const related = relatedTools(tool, 6);
@@ -177,7 +175,7 @@ export default function ToolPage({ tool }: { tool: ToolDefinition }) {
                   with a file half-processed should not be looking at an
                   advert, and an ad beside the workspace is what makes a tool
                   site feel like a content site. */}
-              <AdSlot placement={ADS.tool} allowed={granted} />
+              <AdSlot placement={ADS.tool} />
             </div>
           </div>
 

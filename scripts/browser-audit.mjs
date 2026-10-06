@@ -48,6 +48,28 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 
 const failures = [];
+/**
+ * Ad-network flakiness is reported, not failed on.
+ *
+ * AdSense talks to several hosts, one of which (`sodar`) is a latency probe
+ * that routinely times out on a restricted or noisy network. That has nothing to
+ * do with whether these pages work, and counting it would make the audit
+ * unrunnable from a machine that cannot reach every Google server — which is
+ * most CI networks, and this one.
+ *
+ * The split is by origin rather than by a blanket ignore, so a genuinely broken
+ * first-party asset still fails, and third-party problems stay visible in the
+ * summary instead of disappearing.
+ */
+const THIRD_PARTY = /googlesyndication|doubleclick|fundingchoicesmessages|googleads\.g\./;
+const thirdParty = new Map();
+
+function noteThirdParty(route, detail) {
+  if (!thirdParty.has(detail)) thirdParty.set(detail, []);
+  const list = thirdParty.get(detail);
+  if (list.length < 4) list.push(route);
+}
+
 let checked = 0;
 
 for (const route of routes) {
@@ -56,24 +78,62 @@ for (const route of routes) {
   const failedRequests = [];
 
   page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text().slice(0, 200));
+    if (msg.type() !== 'error') return;
+    // A resource-load error carries the failing URL, so it can be attributed
+    // to an origin the way a script error cannot.
+    const from = msg.location()?.url ?? '';
+    const text = msg.text().slice(0, 200);
+    if (from && THIRD_PARTY.test(from)) noteThirdParty(route, text);
+    else errors.push(text);
   });
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message.slice(0, 200)}`));
   page.on('requestfailed', (req) => {
     // A missing favicon is a cosmetic omission, not a broken page.
-    if (!req.url().includes('favicon')) {
-      failedRequests.push(`${req.url().split('/').pop()} (${req.failure()?.errorText})`);
+    if (req.url().includes('favicon')) return;
+
+    // A request the browser cancelled because the page went away is not a
+    // broken page either. The ad network sends keepalive pings that are still
+    // in flight when the audit closes the tab, and those surface as
+    // ERR_ABORTED. Treating them as failures would mean the audit could only
+    // ever be green on a site with no third-party requests at all.
+    const reason = req.failure()?.errorText ?? '';
+    if (reason.includes('ERR_ABORTED')) return;
+
+    const url = req.url();
+    if (THIRD_PARTY.test(url)) {
+      noteThirdParty(route, `${url.split('/').pop()} (${reason})`);
+      return;
     }
+
+    failedRequests.push(`${url.split('/').pop()} (${reason})`);
   });
 
   const url = base + route;
   try {
-    const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
+    // 15s, not the 30s default. This site is served from disk and answers in
+    // milliseconds, so anything still waiting at 15s is a third-party stall,
+    // and the shorter cap is what keeps a bad network from turning an 84-page
+    // audit into a half-hour one.
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 });
     if (!response || response.status() >= 400) {
       failures.push({ route, reason: `HTTP ${response?.status() ?? 'no response'}` });
       await page.close();
       continue;
     }
+
+    // Hydration is asynchronous, and the route chunk loads after first paint,
+    // so the checks below would otherwise run against a half-hydrated tree.
+    await page.waitForLoadState('load', { timeout: 10_000 }).catch(() => {});
+    await page
+      .waitForFunction(
+        () => {
+          const root = document.querySelector('#root');
+          return !!root && Object.keys(root).some((k) => k.startsWith('__react'));
+        },
+        null,
+        { timeout: 10_000 },
+      )
+      .catch(() => {});
 
     // Hydration proof: React has to have taken over a node the server rendered.
     // Without this, a page is correct HTML and a dead site.
@@ -82,6 +142,10 @@ for (const route of routes) {
       const entry = [...document.querySelectorAll('script[type=module]')].map((s) => s.src);
       return {
         hasMarkup: !!root?.firstElementChild,
+        // React attaches these to the container it has hydrated. Their absence
+        // means the server markup is on screen and React never ran, which is
+        // exactly the failure mode this audit exists to catch.
+        hydrated: !!root && Object.keys(root).some((k) => k.startsWith('__react')),
         entryScripts: entry.length,
         h1: document.querySelectorAll('h1').length,
         title: document.title,
@@ -92,6 +156,7 @@ for (const route of routes) {
     });
 
     if (!state.hasMarkup) failures.push({ route, reason: 'empty #root — the prerenderer wrote no markup' });
+    if (!state.hydrated) failures.push({ route, reason: 'React never hydrated — the page is inert HTML' });
     if (state.entryScripts === 0) failures.push({ route, reason: 'no module script — the page cannot hydrate' });
     if (state.h1 !== 1) failures.push({ route, reason: `${state.h1} <h1> elements, expected exactly 1` });
     if (!state.title) failures.push({ route, reason: 'no <title>' });
@@ -118,6 +183,14 @@ for (const route of routes) {
 await browser.close();
 
 console.log(`\n\nchecked ${checked}/${routes.length} pages at ${base}`);
+
+if (thirdParty.size > 0) {
+  console.log(`\nTHIRD-PARTY WARNINGS (${thirdParty.size}) — ad network only, not a page defect`);
+  for (const [detail, list] of [...thirdParty].sort((a, b) => b[1].length - a[1].length)) {
+    console.log(`  ${detail}`);
+    console.log(`    ${list.length} page(s): ${list.slice(0, 5).join(', ')}`);
+  }
+}
 
 if (failures.length === 0) {
   console.log('No failures. Every page hydrates, logs nothing, and resolves its assets.');

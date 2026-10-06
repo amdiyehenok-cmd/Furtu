@@ -26,6 +26,13 @@
  *  - **Every placement is below the fold** and collapses to nothing before it
  *    fills, so an unfilled slot costs no layout.
  *
+ * Consent is collected by Google's certified CMP rather than by code in this
+ * repository. Google requires a certified, TCF-integrated CMP for personalised
+ * ads in the EEA, UK and Switzerland, and only a certified CMP keeps traffic
+ * eligible for personalised ads rather than the non-personalised fallback. See
+ * AD_ORIGINS for what that costs the CSP, and docs/DEPLOYMENT.md for the two
+ * dashboard steps that turn it on.
+ *
  * The full disclosure lives in src/pages/PrivacyPage.tsx, and the audit in
  * scripts/audit-seo.mjs is taught to allow these origins specifically rather
  * than to stop checking for them.
@@ -42,23 +49,44 @@ declare global {
 export const CLIENT = 'ca-pub-5358754327162242';
 
 /**
- * Third-party origins AdSense requires. Listed explicitly because the CSP in
- * vercel.json has to name them, and a script tag is not a sufficient record of
- * what the page is allowed to talk to.
+ * Third-party origins AdSense and Google's certified consent message require.
+ *
+ * Listed explicitly for two reasons. The CSP in vercel.json has to name them,
+ * and a script tag is not a sufficient record of what the page is allowed to
+ * talk to. The SEO audit also allowlists exactly these, so a new third party
+ * cannot appear without the build noticing.
+ *
+ * The `fundingchoicesmessages.google.com` entries are the important ones and are
+ * easy to miss. They serve the Google-certified CMP that the EEA, UK and
+ * Switzerland require. Leave them out of the CSP and the consent message fails
+ * to render — silently, with no console error and no failed request visible in
+ * the page, because the request is simply never made. The symptom is that
+ * traffic quietly loses eligibility for personalised ads.
  */
 export const AD_ORIGINS = {
-  script: ['https://pagead2.googlesyndication.com'],
+  script: [
+    'https://pagead2.googlesyndication.com',
+    'https://fundingchoicesmessages.google.com',
+    'https://ssl.google.com',
+  ],
   frame: [
     'https://googleads.g.doubleclick.net',
     'https://tpc.googlesyndication.com',
     'https://www.google.com',
+    'https://fundingchoicesmessages.google.com',
+    'https://*.fundingchoicesmessages.google.com',
   ],
   image: [
     'https://*.googlesyndication.com',
     'https://*.doubleclick.net',
     'https://*.googleadservices.com',
   ],
-  connect: ['https://*.googlesyndication.com', 'https://*.doubleclick.net'],
+  connect: [
+    'https://*.googlesyndication.com',
+    'https://*.doubleclick.net',
+    'https://fundingchoicesmessages.google.com',
+    'https://*.fundingchoicesmessages.google.com',
+  ],
 } as const;
 
 /**

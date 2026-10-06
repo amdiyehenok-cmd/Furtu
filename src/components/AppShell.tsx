@@ -2,8 +2,6 @@ import { Suspense, type ReactNode } from 'react';
 
 import { CommandPalette } from './CommandPalette';
 import { SiteFooter, SiteHeader } from './SiteChrome';
-import { ConsentBanner } from './ConsentBanner';
-import { ConsentProvider } from '@/lib/ads-consent';
 import type { Route } from '@/lib/router';
 
 function RouteFallback() {
@@ -18,11 +16,17 @@ function RouteFallback() {
 }
 
 /**
- * The page chrome, shared by the client app and the prerenderer.
+ * The page chrome, used by the prerenderer.
  *
- * Rendering the same shell in both places is what makes hydration safe: the
- * markup the crawler and the browser receive first is byte-for-byte the markup
- * React expects to find, so there is no re-render flash on load.
+ * NOT shared with the client app. `src/App.tsx` renders its own copy of this
+ * chrome for the browser, because it needs the router and the search state that
+ * only exist client-side. The two are kept structurally identical so that the
+ * markup a crawler receives is what React expects to find and hydration is safe.
+ *
+ * This is a genuine trap and it has already bitten once: a consent banner added
+ * here type-checked, prerendered correctly and reached no visitor at all, because
+ * the client half of the app never saw it. If you change the chrome, change
+ * `App.tsx` too, or delete this file and have `App.tsx` use it.
  */
 export function AppShell({
   route,
@@ -38,23 +42,20 @@ export function AppShell({
   onCloseSearch?: () => void;
 }) {
   return (
-    <ConsentProvider>
-      <div className="app-shell">
-        <a className="skip-link" href="#main">
-          Skip to content
-        </a>
-        <SiteHeader onOpenSearch={onOpenSearch ?? (() => {})} />
+    <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <SiteHeader onOpenSearch={onOpenSearch ?? (() => {})} />
 
-        <main id="main" tabIndex={-1}>
-          <Suspense fallback={<RouteFallback />}>{children}</Suspense>
-        </main>
+      <main id="main" tabIndex={-1}>
+        <Suspense fallback={<RouteFallback />}>{children}</Suspense>
+      </main>
 
       <SiteFooter />
-        {searchOpen !== undefined && onCloseSearch && (
+      {searchOpen !== undefined && onCloseSearch && (
         <CommandPalette open={searchOpen} onClose={onCloseSearch} />
-        )}
-        <ConsentBanner />
-      </div>
-    </ConsentProvider>
+      )}
+    </div>
   );
 }

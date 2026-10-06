@@ -281,16 +281,38 @@ export function headTags(meta: PageMeta, cssHref?: string): HeadTag[] {
 
   if (cssHref) tags.push({ tag: 'link', attrs: { rel: 'stylesheet', href: cssHref } });
 
-  // AdSense site verification.
+  // AdSense site verification, and the loader itself.
   //
-  // Google asks for `adsbygoogle.js` in <head>, and accepts that as proof of
-  // ownership. It also accepts this meta tag, which is the better choice here:
-  // it is inert. It declares the publisher ID to Google and loads nothing,
-  // contacts nobody and sets no cookie — so verifying the site does not
-  // require contacting every visitor who has not consented.
+  // This used to withhold `adsbygoogle.js` from the HTML and inject it only
+  // once a locally-built consent banner was accepted, on the reasoning that
+  // fetching the script *is* the request to the ad network. That reasoning was
+  // sound for a hand-rolled gate, and it is exactly what stopped being true
+  // once Google required a certified CMP.
   //
-  // The loader itself is injected by ConsentProvider once consent is given.
+  // Google requires publishers serving personalised ads in the EEA, UK and
+  // Switzerland to use a Google-certified CMP integrated with the IAB TCF.
+  // Google's own "European regulations" message is already certified, so it is
+  // the right tool — and that architecture expects the standard snippet: the
+  // loader in <head>, with the CMP gating the ad request behind it. Two gates in
+  // series would mean two banners, and because a local banner emits no TCF
+  // string the traffic would still be downgraded to non-personalised ads.
+  //
+  // So the loader is now where Google puts it, and the consent decision is
+  // Google's to collect. The CSP in vercel.json has to allow Funding Choices,
+  // or the message silently fails to render with no error anywhere.
   if (adsEnabled()) {
+    tags.push({
+      tag: 'script',
+      attrs: {
+        async: true,
+        crossorigin: 'anonymous',
+        src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${AD_CLIENT}`,
+      },
+    });
+
+    // Also emitted as proof of ownership. It is inert — it declares the
+    // publisher ID to Google and loads nothing — so site verification does not
+    // depend on the script tag above being parsed.
     tags.push({
       tag: 'meta',
       attrs: { name: 'google-adsense-account', content: 'ca-pub-' + AD_CLIENT.replace(/^ca-pub-/, '') },

@@ -92,14 +92,21 @@ export default function PrivacyPage() {
           your browser settings at any time.
         </p>
         <p>
-          The one exception is advertising, and only if you consent to it. If you agree, Google&rsquo;s
-          ad network sets its own cookies &mdash; it does that itself, not Furtu, and Furtu has no
-          access to what they contain or to who is shown what. Declining means none of that happens
-          and no ad is requested.
+          The one exception is advertising, and only where you have agreed to it. If you consent,
+          Google&rsquo;s ad network sets its own cookies &mdash; it does that itself, not Furtu, and
+          Furtu has no access to what they contain or to who is shown what. Declining means none of
+          that happens and no personalised advertising is used.
         </p>
         <p>
-          Your consent answer is kept in local storage, not a cookie, so recording it sends nothing
-          anywhere. Clearing your browser storage removes it and you will be asked once more.
+          In the European Economic Area, the UK and Switzerland, the consent question is asked by
+          Google&rsquo;s own certified consent message rather than by Furtu. Google requires this for
+          any site serving personalised ads in those regions, and only a certified message keeps ads
+          personalised there. You can change your answer at any time through that message&rsquo;s
+          &ldquo;manage options&rdquo;, and changing it back to no takes effect straight away.
+        </p>
+        <p>
+          Outside those regions no consent message is shown at all. Elsewhere in the world, clear
+          your browser storage to remove anything the ad network has kept.
         </p>
       </section>
 
@@ -118,10 +125,10 @@ export default function PrivacyPage() {
           and no advert is ever shown inside a tool, only after the content on the page.
         </p>
         <p>
-          Nothing is set until you agree. You are asked once, your answer is kept in this
-          browser&rsquo;s local storage rather than in a cookie, and saying &ldquo;no thanks&rdquo;
-          means no advertising cookies and no ad requests at all. Your tool pages keep working
-          exactly as before.
+          Consent is collected by a Google-certified consent message, which appears to visitors in
+          the European Economic Area, the UK and Switzerland. It is shown once, you can revisit it
+          through its manage options, and saying no means your ads are not personalised. Your tool
+          pages keep working exactly as before either way.
         </p>
         <p>
           Google&rsquo;s use of advertising cookies enables it and its partners to serve ads based on

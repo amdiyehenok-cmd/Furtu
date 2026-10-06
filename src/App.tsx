@@ -1,9 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 
 import { CommandPalette } from './components/CommandPalette';
-import { ConsentBanner } from './components/ConsentBanner';
 import { SiteFooter, SiteHeader } from './components/SiteChrome';
-import { ConsentProvider } from './lib/ads-consent';
 import { matchRoute, currentPath, routeComponent, startRouter, subscribe, type Route } from './lib/router';
 import {
   categoryMeta,
@@ -132,24 +130,21 @@ export default function App() {
   const Page = routeComponent(route);
 
   return (
-    <ConsentProvider>
-      <div className="app-shell">
-        <a className="skip-link" href="#main">
-          Skip to content
-        </a>
-        <SiteHeader onOpenSearch={() => setSearchOpen(true)} />
+    <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <SiteHeader onOpenSearch={() => setSearchOpen(true)} />
 
-        <main id="main" tabIndex={-1}>
-          <Suspense fallback={<RouteFallback />}>
-            <Page />
-          </Suspense>
-        </main>
+      <main id="main" tabIndex={-1}>
+        <Suspense fallback={<RouteFallback />}>
+          <Page />
+        </Suspense>
+      </main>
 
-        <SiteFooter />
-        <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
-        <ConsentBanner />
-      </div>
-    </ConsentProvider>
+      <SiteFooter />
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+    </div>
   );
 }
 

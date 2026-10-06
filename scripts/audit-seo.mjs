@@ -285,6 +285,12 @@ async function main() {
     /^tpc\.googlesyndication\.com$/,
     /^googleads\.g\.doubleclick\.net$/,
     /^www\.google\.(?:com|co\.[a-z]{2})$/,
+    // Google's certified consent message. Required for personalised ads in the
+    // EEA, UK and Switzerland. It is only ever requested for those visitors, so
+    // a European build of the site legitimately hits it and other builds never
+    // do — which is why it belongs here rather than being treated as a stray.
+    /^(?:[a-z0-9-]+\.)*fundingchoicesmessages\.google\.com$/,
+    /^ssl\.google\.com$/,
   ];
 
   // Only resources the page *fetches* count. A hyperlink to Google's ad-settings

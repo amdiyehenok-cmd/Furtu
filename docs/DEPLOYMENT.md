@@ -175,20 +175,64 @@ not on its allowlist, so neither can regress silently.
 
 The site is monetised with Google AdSense, publisher ID `ca-pub-5358754327162242`.
 
-**`public/ads.txt` must be served at the domain root.** It is
-`google.com, pub-5358754327162242, DIRECT, f08c47fec0942fa0` and the audit warns
-if it is missing, because AdSense will not serve without it.
+### ads.txt — done, verified
 
-Two things about the implementation are deliberate and should not be "corrected":
+`public/ads.txt` is committed and is served from the domain root. It contains
+exactly:
 
-1. **The AdSense script is not in `<head>`,** despite Google's snippet saying it
-   should be. Fetching that script *is* the request to the ad network, so
-   putting it in the prerendered HTML contacts every visitor before being asked —
-   including anyone who lands on a deep link and never sees the banner. It is
-   injected on consent instead. Verification with Google uses the inert
-   `<meta name="google-adsense-account">` tag, which contacts nothing.
-2. **The CSP in `vercel.json` names the AdSense origins.** If you tighten it, ads
-   will silently fail to render rather than error.
+```
+google.com, pub-5358754327162242, DIRECT, f08c47fec0942fa0
+```
+
+58 bytes, no byte order mark. Confirmed live:
+
+```bash
+curl -s https://furtu.xyz/ads.txt
+```
+
+`tests/ads.test.ts` asserts the exact line and the absence of a BOM, because a
+BOM makes the first record unreadable to AdSense and fails without saying why.
+
+### Turn on Google's certified consent message
+
+**This is the step that is not done yet**, and it is worth doing: Google
+requires a Google-certified CMP integrated with the IAB TCF before it will serve
+*personalised* ads to visitors in the EEA, UK or Switzerland. Without one those
+visitors get non-personalised ads instead. It is a revenue loss, not a takedown.
+
+In the AdSense dashboard:
+
+1. **Privacy & messaging**.
+2. **European regulations** message type card → **Create** (or **Manage**).
+3. Select `furtu.xyz`, add the privacy policy URL (`https://furtu.xyz/privacy`).
+4. In *User choices*, pick the **3-option** message — consent, do not consent,
+   manage options. Do **not** use the 2-option layout: it buries refusal behind
+   "manage options", and GDPR requires rejecting to be as easy as accepting.
+5. Set the default language, add the logo if you want one, then **Publish**.
+
+It applies to every site in the AdSense account, so future sites are covered by
+creating them against the same account and adding them to the message.
+
+> **You cannot fully test this from outside the EEA/UK/Switzerland.** The
+> message only renders for those visitors. Load `https://furtu.xyz` through a VPN
+> or EU proxy after publishing to confirm it appears.
+
+### Two things about the implementation that look wrong but are not
+
+1. **The AdSense loader is in `<head>`,** which is Google's own snippet. An
+   earlier version deliberately withheld it until a locally-built consent banner
+   was accepted, on the reasoning that fetching the script is itself the request
+   to the ad network. That reasoning was sound for a hand-rolled gate and it
+   stopped being true the moment Google required a certified CMP: the certified
+   architecture expects the standard snippet with the CMP gating the request
+   behind it, and a local banner emits no TCF string, so keeping one would have
+   meant two banners *and* traffic still downgraded anyway.
+2. **The CSP names the Funding Choices origins.** `vercel.json` has to allow
+   `fundingchoicesmessages.google.com` in `script-src`, `connect-src` and
+   `frame-src`. Leave them out and the consent message fails to render —
+   silently, with no console error, because the request is simply never made.
+   `tests/ads.test.ts` asserts every origin in `src/lib/ads.ts` appears in the
+   CSP so this cannot rot.
 
 To switch advertising off, set `CLIENT = ''` in `src/lib/ads.ts`. Nothing is
 injected, the slots render nothing, and the layout matches the ad-free build.
