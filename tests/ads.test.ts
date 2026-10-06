@@ -98,6 +98,7 @@ describe('Content-Security-Policy allows the whole ad stack', () => {
     // it fails as a console violation on every page view rather than as a
     // missing feature.
     expect(directive(csp, 'connect-src')).toContain('adtrafficquality.google');
+    expect(directive(csp, 'connect-src')).toContain('csi.gstatic.com');
   });
 
   it('keeps the loader host out of the way of nothing else', () => {

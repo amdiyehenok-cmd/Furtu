@@ -92,6 +92,9 @@ export const AD_ORIGINS = {
     // not ad delivery, so blocking it costs no revenue, but it logs a CSP
     // violation on every page view for every visitor.
     'https://*.adtrafficquality.google',
+    // Google's client-side instrumentation. Also found only by running the
+    // harness against production.
+    'https://csi.gstatic.com',
   ],
 } as const;
 
