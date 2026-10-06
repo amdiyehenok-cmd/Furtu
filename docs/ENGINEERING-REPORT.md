@@ -509,6 +509,55 @@ options, neither taken because both are larger than the bug warranted:
 
 The browser harnesses are what caught it, which is the argument for them.
 
+### 13.3 The audit that agreed with the bug
+
+Seven built, crawlable pages — `/about`, `/changelog`, `/contact`, `/pricing`,
+`/privacy`, `/security`, `/terms` — were missing from `sitemap.xml`. The SEO
+audit reported **"No blocking problems found."**
+
+The cause is the part worth remembering. The prerenderer built the sitemap by
+filtering routes down to `/tools/` and `/guides/`, and the audit then checked
+the sitemap with *the same filter*:
+
+```js
+const shouldBeListed = page.route === '/' || page.route.startsWith('/tools/') || page.route.startsWith('/guides');
+```
+
+So the audit was validating the generator against its own copy of the
+generator's assumption. It could only ever catch a page the generator already
+produced, which made it incapable of catching a page the generator wrongly
+omitted — the one thing it appeared to exist for. The count was even papered
+over with a hardcoded `+ 3` in the log line.
+
+Worse, `prerender.mjs` carried the comment *"Built from the routes that actually
+rendered, which is the only list guaranteed to match the HTML files on disk"*,
+directly above code that did the opposite. A comment that asserts a guarantee
+the code does not provide is worse than no comment, because the next reader
+trusts it.
+
+Both are fixed:
+
+- the sitemap derives from the routes that actually wrote a file, with priority
+  and change frequency as a pure function of the route shape, so a new page
+  gets a sensible entry without anyone remembering to add it;
+- the audit derives sitemap eligibility from each page's **own** robots
+  directive rather than a route pattern, so the check and the thing it checks
+  cannot share an assumption.
+
+The new check was then deliberately broken to confirm it bites. Re-dropping
+those seven pages makes `npm run audit:seo` fail with exactly those seven and a
+non-zero exit — a state the previous audit passed. `Indexable` and
+`Sitemap URLs` are now both 83 and are printed side by side so the two drifting
+apart is visible at a glance.
+
+**The transferable lesson:** a check that re-implements the logic of the thing
+it is checking is not a check. Compare against reality, not against a second
+copy of the assumption. The same shape of mistake appears in `tests/ads.test.ts`,
+which proves every origin in `AD_ORIGINS` appears in the CSP — a list-to-CSP
+assertion that cannot catch an origin the list is missing. That one is closed
+by running the browser harness against production, where the edge adds
+constraints a local build has no way to reveal.
+
 ## 14. Privacy claims are technically true
 
 The "Processed locally" badge on every tool page is **derived from

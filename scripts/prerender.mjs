@@ -7,8 +7,9 @@
  * title, meta description, canonical, Open Graph, structured data, and all of
  * the page's visible text.
  *
- * It also writes `sitemap.xml` and `robots.txt` from the same registry, so the
- * three can never disagree about which URLs exist.
+ * It also writes `sitemap.xml` and `robots.txt` from the routes that actually
+ * rendered, so the HTML on disk and the sitemap cannot disagree about which
+ * URLs exist.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -65,6 +66,36 @@ function lastmodFor(iso) {
   return typeof iso === 'string' ? iso.slice(0, 10) : new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Sitemap priority and change frequency, derived from the shape of the route.
+ *
+ * Kept as a pure function of the path so the sitemap cannot drift from the set
+ * of routes the site actually publishes. A new static page gets a sensible
+ * entry automatically instead of needing to be added to a hand-maintained list.
+ */
+function priorityFor(route) {
+  const depth = route.split('/').filter(Boolean).length;
+
+  if (route === '/') return { priority: '1.0', changefreq: 'weekly' };
+  if (route === '/tools') return { priority: '0.9', changefreq: 'weekly' };
+
+  // A category hub (/tools/pdf) is a real destination; a tool leaf
+  // (/tools/pdf/merge-pdf) is the long tail.
+  if (route.startsWith('/tools/')) {
+    return depth > 2
+      ? { priority: '0.8', changefreq: 'monthly' }
+      : { priority: '0.9', changefreq: 'weekly' };
+  }
+
+  if (route.startsWith('/guides/')) return { priority: '0.6', changefreq: 'monthly' };
+  if (route === '/guides') return { priority: '0.7', changefreq: 'monthly' };
+
+  // Static pages. /pricing is a genuine destination; the rest are trust and
+  // compliance pages that rank rarely but should still be discoverable.
+  if (route === '/pricing') return { priority: '0.6', changefreq: 'monthly' };
+  return { priority: '0.4', changefreq: 'monthly' };
+}
+
 async function main() {
   if (!existsSync(ssrEntry)) {
     throw new Error(`Missing ${ssrEntry}. Run "npm run build:ssr" before the prerenderer.`);
@@ -80,6 +111,8 @@ async function main() {
 
   const routes = prerenderRoutes();
   const failures = [];
+  /** Routes that produced a file on disk. The sitemap is built from this. */
+  const rendered = [];
   let written = 0;
 
   for (const route of routes) {
@@ -103,6 +136,7 @@ async function main() {
 `;
 
       await writeFile(file, document, 'utf8');
+      rendered.push(route);
       written += 1;
       if (status === 404) await writeFile(path.join(distDir, '404.html'), document, 'utf8');
     } catch (error) {
@@ -111,27 +145,20 @@ async function main() {
   }
 
   // --- sitemap ---------------------------------------------------------
-  // Built from the routes that actually rendered, which is the only list
-  // guaranteed to match the HTML files on disk.
+  // Built from the routes that actually rendered a file on disk. That is the
+  // only list guaranteed to match the HTML, which is the point: this used to
+  // filter down to `/tools/` and `/guides/` and drop the seven static pages,
+  // while a comment above claimed it could never disagree with what was built.
+  // Deriving from `rendered` makes the claim true by construction instead.
+  //
+  // `/404` is excluded because it is a response, not a page.
   const origin = SITE.origin;
   const today = new Date().toISOString().slice(0, 10);
-  const toolAndGuideRoutes = routes.filter(
-    (route) => route.startsWith('/tools/') || route.startsWith('/guides/'),
-  );
+  const indexable = rendered.filter((route) => route !== '/404');
 
-  const entries = [
-    { loc: `${origin}/`, priority: '1.0', changefreq: 'weekly' },
-    { loc: `${origin}/tools`, priority: '0.9', changefreq: 'weekly' },
-    { loc: `${origin}/guides`, priority: '0.7', changefreq: 'monthly' },
-  ]
-    .concat(
-      toolAndGuideRoutes.map((route) => ({
-        loc: `${origin}${route}`,
-        // A leaf page under a category or a guide article.
-        priority: route.split('/').length > 3 ? '0.8' : '0.7',
-        changefreq: 'monthly',
-      })),
-    )
+  const entries = indexable
+    .map((route) => ({ route, loc: `${origin}${route === '/' ? '/' : route}`, ...priorityFor(route) }))
+    .sort((a, b) => a.route.localeCompare(b.route))
     .map(
       (entry) =>
         `  <url>\n    <loc>${entry.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${entry.changefreq}</changefreq>\n    <priority>${entry.priority}</priority>\n  </url>`,
@@ -162,7 +189,7 @@ async function main() {
   );
 
   console.log(`[prerender] ${written}/${routes.length} routes written to dist/`);
-  console.log(`[prerender] sitemap: ${toolAndGuideRoutes.length + 3} URLs`);
+  console.log(`[prerender] sitemap: ${indexable.length} URLs`);
 
   if (failures.length > 0) {
     console.error(`[prerender] ${failures.length} route(s) failed:`);

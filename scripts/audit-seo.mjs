@@ -22,6 +22,8 @@ const distDir = path.join(rootDir, 'dist');
 const problems = [];
 const warnings = [];
 const stats = { pages: 0, indexable: 0, tools: 0, bytes: 0 };
+/** Every page that asks to be indexed, collected from the built HTML. */
+const indexableRoutes = new Set();
 
 function fail(page, message) {
   problems.push({ page, message });
@@ -75,6 +77,9 @@ const ORIGIN = (
   'https://furtu.xyz'
 ).replace(/\/$/, '');
 
+/** The `<loc>` values the build actually emitted, for the report. */
+const sitemapLocs = [...sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+
 async function main() {
   if (!existsSync(distDir)) {
     console.error('dist/ not found. Run `npm run build` first.');
@@ -105,6 +110,13 @@ async function main() {
     const jsonLd = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g) ?? [];
 
     pages.push({ route, title, description, canonical, robots, h1: h1s.length, jsonLd: jsonLd.length, size, html });
+
+    // A page is sitemap-eligible if it asks to be indexed. This is read off the
+    // page itself rather than derived from a route pattern, because the previous
+    // check hard-coded the same `/tools/` and `/guides/` prefixes that the
+    // prerenderer used to filter the sitemap — so the audit was validating the
+    // generator against itself and reported seven missing pages as clean.
+    if (route !== '/404' && !robots.includes('noindex')) indexableRoutes.add(route);
 
     if (route !== '/404') {
       if (robots.startsWith('index')) stats.indexable += 1;
@@ -187,11 +199,10 @@ async function main() {
       const route = loc.replace(ORIGIN, '') || '/';
       if (!known.has(route)) fail('(sitemap)', `sitemap lists a route that was not built: ${route}`);
     }
-    for (const page of pages) {
-      if (page.route === '/404') continue;
-      const shouldBeListed = page.route === '/' || page.route === '/tools' || page.route.startsWith('/tools/') || page.route.startsWith('/guides');
-      if (shouldBeListed && !locs.includes(`${ORIGIN}${page.route === '/' ? '/' : page.route}`)) {
-        fail('(sitemap)', `built page is missing from the sitemap: ${page.route}`);
+    for (const page of indexableRoutes) {
+      const loc = `${ORIGIN}${page === '/' ? '/' : page}`;
+      if (!locs.includes(loc)) {
+        fail('(sitemap)', `built page is missing from the sitemap: ${page}`);
       }
     }
     // Every URL in the sitemap must sit on the one origin. Deriving ORIGIN from
@@ -217,6 +228,7 @@ async function main() {
   console.log('===============');
   console.log(`Pages built        ${stats.pages}`);
   console.log(`Indexable          ${stats.indexable}`);
+  console.log(`Sitemap URLs       ${sitemapLocs.length}`);
   console.log(`Tool pages         ${stats.tools}`);
   console.log(`Total HTML bytes   ${(stats.bytes / 1024).toFixed(0)} KB`);
   console.log(`Unique titles      ${titles.size}`);
