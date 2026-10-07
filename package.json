@@ -27,6 +27,8 @@
     "assets:fonts": "node scripts/fetch-fonts.mjs",
     "assets:og": "node scripts/make-og-image.mjs",
     "assets": "npm run assets:fonts && npm run build && npm run assets:og",
+    "indexnow:preview": "node scripts/indexnow.mjs --new dist --all",
+    "indexnow:submit": "node scripts/indexnow.mjs --new dist --all --submit",
     "verify": "npm run typecheck && npm run test && npm run build && npm run audit:seo",
     "verify:browser": "node scripts/browser-audit.mjs && node scripts/test-all-tools.mjs && node scripts/check-ads.mjs",
     "format": "oxfmt src scripts tests"

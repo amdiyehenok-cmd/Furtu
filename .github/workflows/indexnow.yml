@@ -1,0 +1,70 @@
+name: IndexNow
+
+# Submits genuinely changed URLs to IndexNow on every push to main.
+#
+# Two builds are compared rather than trusting a stored list of "changed"
+# files. That is deliberate: the build renames every hashed asset, so any
+# change to the bundle looks like a change to every page if you diff files.
+# scripts/lib/fingerprint.mjs strips hashed asset URLs before hashing, so what
+# gets compared is the part a crawler actually judges.
+#
+# Google does not participate in IndexNow. This notifies Bing, Yandex,
+# Seznam, Naver, Yep, Amazonbot and the Internet Archive.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      submit_all:
+        description: 'Submit every URL (first-time registration only)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: indexnow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # IndexNow compares against the previous commit, so the history has
+          # to be there. A shallow clone of depth 1 would make HEAD~1 fail.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build the current commit
+        run: npm ci && npm run build
+
+      - name: Build the previous commit
+        run: |
+          git worktree add "$RUNNER_TEMP/prev" HEAD~1
+          cd "$RUNNER_TEMP/prev"
+          npm ci
+          npm run build
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+
+      - name: Report what changed
+        run: node scripts/indexnow.mjs --new dist --old "${{ runner.temp }}/prev/dist"
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+
+      # On a push, submit only what actually changed. Submitting unchanged URLs
+      # is the abuse pattern IndexNow documents.
+      - name: Submit changed URLs
+        if: ${{ github.event_name == 'push' && inputs.submit_all != true }}
+        run: node scripts/indexnow.mjs --new dist --old "${{ runner.temp }}/prev/dist" --submit
+
+      # The one legitimate full submission: registering the site for the first
+      # time, when every URL genuinely is new to the engines.
+      - name: Submit every URL
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit_all == true }}
+        run: node scripts/indexnow.mjs --new dist --all --submit
