@@ -319,6 +319,14 @@ export function headTags(meta: PageMeta, cssHref?: string): HeadTag[] {
     });
   }
 
+  // Yandex Webmaster ownership. The root file also exists, but `cleanUrls`
+  // 308-redirects it away from the exact filename Yandex was told to fetch, so
+  // the tag is the mechanism that reliably works. See SITE.yandexVerification.
+  tags.push({
+    tag: 'meta',
+    attrs: { name: 'yandex-verification', content: SITE.yandexVerification },
+  });
+
   for (const node of meta.jsonLd) {
     tags.push({
       tag: 'script',

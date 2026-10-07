@@ -44,6 +44,17 @@ export const SITE = {
   securityEmail: `security@${mailHost()}`,
   /** Languages the architecture is prepared for. Only English ships today. */
   plannedLocales: ['en', 'am', 'om', 'ar', 'fr', 'es', 'pt', 'de'],
+  /**
+   * Yandex Webmaster ownership token.
+   *
+   * Yandex accepts either this meta tag or a file at the domain root, and both
+   * are shipped. The file is not sufficient on its own here: `cleanUrls` in
+   * vercel.json makes the host 308-redirect `/<name>.html` to `/<name>`, so a
+   * crawler fetching the exact filename it was given only works if it happens to
+   * follow that redirect. The meta tag has no such dependency and cannot be
+   * broken by a hosting setting.
+   */
+  yandexVerification: '841ac8768b327030',
 } as const;
 
 export function absoluteUrl(path: string): string {
